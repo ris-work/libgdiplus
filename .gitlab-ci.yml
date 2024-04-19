@@ -1,0 +1,18 @@
+stages:
+    - build
+
+variables:
+    GIT_SUBMODULE_STRATEGY: "recursive"
+
+linux-build:
+    stage: build
+    image: $CI_REGISTRY/wine-mono/mono:debian-bookworm-linux-build
+    interruptible: true
+    artifacts:
+        paths:
+            - usr/local/
+        expire_in: 1 week
+    script:
+        - './autogen.sh'
+        - 'make -j$(nproc)'
+        - 'make install DESTDIR=$PWD'
