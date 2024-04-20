@@ -16,3 +16,4 @@ linux-build:
         - './autogen.sh'
         - 'make -j$(nproc)'
         - 'make install DESTDIR=$PWD'
+        - 'make check'
