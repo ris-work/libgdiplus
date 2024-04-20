@@ -605,7 +605,16 @@ static void test_invalidFileDirectory ()
 	createFile (zeroNumberOfEntries, OutOfMemory);
 	// Libtiff 4.0.4, released on June 21st 2015, fixed this bug. However, outdated platforms may not have this fix.
 #if TIFFLIB_VERSION >= 20150621
-	createFile (recursiveNextIFDOffset, OutOfMemory);
+{
+	GpStatus status;
+	FILE *f = fopen (file, "wb+");
+	assert (f);
+	fwrite ((void *) recursiveNextIFDOffset, sizeof (BYTE), sizeof (recursiveNextIFDOffset), f);
+	fclose (f);
+	status = GdipLoadImageFromFile (wFile, &image);
+	if (status != Ok) // current libtiff detects the error but libgdiplus ignores it and incorrectly succeeds
+		assertEqualInt (status, OutOfMemory);
+}
 #endif
 }
 
