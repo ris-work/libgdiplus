@@ -592,6 +592,19 @@ MeasureString (GpGraphics *graphics, GDIPCONST WCHAR *stringUnicode, int *length
 					/* Just cut off the text */
 					printf("End of line at index:%d\n", EndOfLine);
 #endif
+					// Force the break of a long word if necessary
+					if ((format->formatFlags & StringFormatFlagsNoWrap)==0) {
+						CurrentDetail->Flags |= STRING_DETAIL_LINESTART;
+						CurrentDetail->PosX = CursorX = 0;
+						CursorX += CurrentDetail->Width;
+						CursorY += LineHeight;
+						CurrentDetail->PosY = CursorY;
+						CurrentDetail->LineLen = 1;
+						CurrentLineStart = CurrentDetail;
+						CurrentDetail++;
+						continue;
+					}
+
 					CurrentLineStart->LineLen=EndOfLine;
 				}
 
@@ -779,26 +792,36 @@ MeasureString (GpGraphics *graphics, GDIPCONST WCHAR *stringUnicode, int *length
 
 	if (AlignHorz != StringAlignmentNear || AlignVert != StringAlignmentNear) {
 		// Update alignment
-		int length = 0;
-		int current_line_length = 0;
+		int LineLen = 0;
+		unsigned long NextLineIdx = 0;
+		float LineWidth = FrameWidth;
 		for (i = 0; i < StringLen; i++) {
-			if (i == current_line_length) {
-				length = StringDetails[i].LineLen;
-				current_line_length = min(length + i, StringLen);
+			if (StringDetails[i].Flags & STRING_DETAIL_LINESTART) {
+				LineLen = StringDetails[i].LineLen;
+				NextLineIdx = min(LineLen + i, StringLen);
+				LineWidth = StringDetails[NextLineIdx - 1].PosX;
+				// Guard against the case of a split word and no line width reference
+				//	or the single character case
+				if (LineWidth == 0) {
+					if (LineLen == 1)
+						LineWidth = StringDetails[i].Width;
+					else
+						LineWidth = FrameWidth;
+				}
+				else
+					LineWidth += StringDetails[NextLineIdx - 1].Width;
+				if (LineWidth > FrameWidth)
+					LineWidth = FrameWidth;
 			}
 
 			switch (AlignHorz) {
 			case StringAlignmentNear:
 				break;
 			case StringAlignmentCenter:
-				if ((current_line_length == 1) || (StringDetails [current_line_length - 1].PosX > 0)) {
-					StringDetails[i].PosX += (FrameWidth - StringDetails [current_line_length - 1].PosX -
-						StringDetails [current_line_length - 1].Width) / 2;
-				}
+				StringDetails[i].PosX += (FrameWidth - LineWidth) / 2;
 				break;
 			case StringAlignmentFar:
-				StringDetails[i].PosX += FrameWidth - StringDetails [current_line_length - 1].PosX -
-					StringDetails [current_line_length - 1].Width;
+				StringDetails[i].PosX += FrameWidth - LineWidth;
 				break;
 			}
 
