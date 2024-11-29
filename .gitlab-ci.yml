@@ -17,3 +17,16 @@ linux-build:
         - 'make -j$(nproc)'
         - 'make install DESTDIR=$PWD'
         - 'make check'
+
+build-dist:
+    stage: build
+    image: $CI_REGISTRY/mono/mono:debian-bookworm-linux-build
+    when: manual
+    interruptible: true
+    artifacts:
+        paths:
+            - libgdiplus-*.tar.gz
+        expire_in: 1 week
+    script:
+        - './autogen.sh'
+        - 'make dist'
