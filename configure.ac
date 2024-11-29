@@ -1,5 +1,5 @@
 AC_INIT(libgdiplus, [6.3],
-	[https://github.com/mono/mono/issues/new])
+	[https://gitlab.winehq.org/mono/libgdiplus/-/issues/new])
 
 AC_CONFIG_SRCDIR([README.md])
 AC_CONFIG_MACRO_DIR([m4])
