@@ -448,8 +448,10 @@ gdip_pango_setup_layout (cairo_t *cr, GDIPCONST WCHAR *stringUnicode, int length
 		pango_layout_iter_free (iter);
 	}
 
+	g_mutex_lock (&font->family->collection->pango_font_map_lock);
 	pango_layout_get_pixel_extents (layout, &ink, &logical);
 	//g_warning ("\tlogical\t[x %d, y %d, w %d, h %d][x %d, y %d, w %d, h %d]", logical.x, logical.y, logical.width, logical.height, ink.x, ink.y, ink.width, ink.height);
+	g_mutex_unlock (&font->family->collection->pango_font_map_lock);
 
 	if ((fmt->formatFlags & StringFormatFlagsNoFitBlackBox) == 0) {
 		/* By default don't allow overhang - ink space may be larger than logical space */

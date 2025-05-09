@@ -150,6 +150,7 @@ GdipNewInstalledFontCollection (GpFontCollection **fontCollection)
 
 #if USE_PANGO_RENDERING
 		sysfonts->pango_font_map = pango_cairo_font_map_new_for_font_type (CAIRO_FONT_TYPE_FT);
+		g_mutex_init(&sysfonts->pango_font_map_lock);
 #endif
 
 		g_once_init_leave(&system_fonts, sysfonts);
@@ -181,6 +182,7 @@ GdipNewPrivateFontCollection (GpFontCollection **fontCollection)
 #if USE_PANGO_RENDERING
 	result->pango_font_map = pango_cairo_font_map_new_for_font_type (CAIRO_FONT_TYPE_FT);
 	pango_fc_font_map_set_config ((PangoFcFontMap *)result->pango_font_map, result->config);
+	g_mutex_init(&result->pango_font_map_lock);
 #endif
 
 	*fontCollection = result;
@@ -808,6 +810,7 @@ gdip_get_fontfamily_details (GpFontFamily *family, FontStyle style)
 #else
 	PangoContext *context = pango_cairo_font_map_create_context ((PangoCairoFontMap*)map);
 #endif
+	g_mutex_lock(&family->collection->pango_font_map_lock);
 	PangoFont *pf = pango_font_map_load_font (map, context, gdip_get_pango_font_description (font));
 
 	if (pf) {
@@ -830,6 +833,7 @@ gdip_get_fontfamily_details (GpFontFamily *family, FontStyle style)
 	}
 
 	g_object_unref (context);
+	g_mutex_unlock(&family->collection->pango_font_map_lock);
 
 	GdipDeleteFont (font);
 	return status;

@@ -42,6 +42,7 @@ struct _FontCollection {
 	FcConfig*	config;		/* Only for private collections */
 #ifdef USE_PANGO_RENDERING
 	PangoFontMap*	pango_font_map;
+	GMutex	pango_font_map_lock;
 #endif
 };
 
