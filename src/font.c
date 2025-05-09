@@ -46,11 +46,7 @@
 #endif
 
 /* Generic fonts families */
-#if GLIB_CHECK_VERSION(2,32,0)
 static GMutex generic;
-#else
-static GStaticMutex generic = G_STATIC_MUTEX_INIT;
-#endif
 static GpFontFamily *familySerif = NULL;
 static GpFontFamily *familySansSerif = NULL;
 static GpFontFamily *familyMonospace = NULL;
@@ -284,11 +280,7 @@ GdipDeleteFontFamily (GpFontFamily *fontFamily)
 	if (!fontFamily)
 		return InvalidParameter;
 
-#if GLIB_CHECK_VERSION(2,32,0)
 	g_mutex_lock (&generic);
-#else
-	g_static_mutex_lock (&generic);
-#endif
 
 	if (fontFamily == familySerif) {
 		ref_familySerif--;
@@ -314,11 +306,7 @@ GdipDeleteFontFamily (GpFontFamily *fontFamily)
 			familyMonospace = NULL;
 	}	
 
-#if GLIB_CHECK_VERSION(2,32,0)
 	g_mutex_unlock (&generic);
-#else
-	g_static_mutex_unlock (&generic);
-#endif
 	
 	if (delete) {
 		if (fontFamily->allocated) {
@@ -455,11 +443,7 @@ create_pattern_from_name (char* name)
 	return full_pattern;
 }
 
-#if GLIB_CHECK_VERSION(2,32,0)
 static GMutex patterns_mutex;
-#else
-static GStaticMutex patterns_mutex = G_STATIC_MUTEX_INIT;
-#endif
 static GHashTable *patterns_hashtable = NULL;
 
 static GpStatus
@@ -476,11 +460,7 @@ create_fontfamily_from_name (char* name, GpFontFamily **fontFamily)
 	}
 	status = FontFamilyNotFound;
 
-#if GLIB_CHECK_VERSION(2,32,0)
 	g_mutex_lock (&patterns_mutex);
-#else
-	g_static_mutex_lock (&patterns_mutex);
-#endif
 
 	if (patterns_hashtable) {
 		pat = (FcPattern*) g_hash_table_lookup (patterns_hashtable, name);
@@ -508,11 +488,7 @@ create_fontfamily_from_name (char* name, GpFontFamily **fontFamily)
 	}
 
 	*fontFamily = ff;
-#if GLIB_CHECK_VERSION(2,32,0)
 	g_mutex_unlock (&patterns_mutex);
-#else
-	g_static_mutex_unlock (&patterns_mutex);
-#endif
 	return status;
 }
 
@@ -527,11 +503,7 @@ free_cached_pattern (gpointer key, gpointer value, gpointer user)
 void
 gdip_font_clear_pattern_cache (void)
 {
-#if GLIB_CHECK_VERSION(2,32,0)
 	g_mutex_lock (&patterns_mutex);
-#else
-	g_static_mutex_lock (&patterns_mutex);
-#endif
 	if (patterns_hashtable) {
 		g_hash_table_foreach_remove (patterns_hashtable, free_cached_pattern, NULL);
 		g_hash_table_destroy (patterns_hashtable);
@@ -543,11 +515,7 @@ gdip_font_clear_pattern_cache (void)
 	ref_familySerif = 0;
 	ref_familySansSerif = 0;
 	ref_familyMonospace = 0;
-#if GLIB_CHECK_VERSION(2,32,0)
 	g_mutex_unlock (&patterns_mutex);
-#else
-	g_static_mutex_unlock (&patterns_mutex);
-#endif
 }
 
 static GpStatus
@@ -644,11 +612,7 @@ GdipGetGenericFontFamilySansSerif (GpFontFamily **nativeFamily)
 	if (!nativeFamily)
 		return InvalidParameter;
 	
-#if GLIB_CHECK_VERSION(2,32,0)
 	g_mutex_lock (&generic);
-#else
-	g_static_mutex_lock (&generic);
-#endif
 
 	if (ref_familySansSerif == 0)
 		status = GdipCreateFontFamilyFromName (MSSansSerif, NULL, &familySansSerif);
@@ -658,11 +622,7 @@ GdipGetGenericFontFamilySansSerif (GpFontFamily **nativeFamily)
 	else
 		familySansSerif = NULL;
 
-#if GLIB_CHECK_VERSION(2,32,0)
 	g_mutex_unlock (&generic);
-#else
-	g_static_mutex_unlock (&generic);
-#endif
 
 	*nativeFamily = familySansSerif;    
 	return status;
@@ -678,11 +638,7 @@ GdipGetGenericFontFamilySerif (GpFontFamily **nativeFamily)
 	if (!nativeFamily)
 		return InvalidParameter;
 	
-#if GLIB_CHECK_VERSION(2,32,0)
 	g_mutex_lock (&generic);
-#else
-	g_static_mutex_lock (&generic);
-#endif
 
 	if (ref_familySerif == 0)
 		status = GdipCreateFontFamilyFromName (Serif, NULL, &familySerif);
@@ -692,11 +648,7 @@ GdipGetGenericFontFamilySerif (GpFontFamily **nativeFamily)
 	else
 		familySerif = NULL;
 
-#if GLIB_CHECK_VERSION(2,32,0)
 	g_mutex_unlock (&generic);
-#else
-	g_static_mutex_unlock (&generic);
-#endif
 
 	*nativeFamily = familySerif;
 	return status;
@@ -712,11 +664,7 @@ GdipGetGenericFontFamilyMonospace (GpFontFamily **nativeFamily)
 	if (!nativeFamily)
 		return InvalidParameter;
 	
-#if GLIB_CHECK_VERSION(2,32,0)
 	g_mutex_lock (&generic);
-#else
-	g_static_mutex_lock (&generic);
-#endif
 
 	if (ref_familyMonospace == 0)
 		status = GdipCreateFontFamilyFromName (Monospace, NULL, &familyMonospace);
@@ -726,11 +674,7 @@ GdipGetGenericFontFamilyMonospace (GpFontFamily **nativeFamily)
 	else
 		familyMonospace = NULL;
 
-#if GLIB_CHECK_VERSION(2,32,0)
 	g_mutex_unlock (&generic);
-#else
-	g_static_mutex_unlock (&generic);
-#endif
 
 	*nativeFamily = familyMonospace;    
 	return status;

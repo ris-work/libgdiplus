@@ -20,7 +20,7 @@ AC_PATH_PROG(PKG_CONFIG, pkg-config, no)
 if test "x$PKG_CONFIG" = "xno"; then
 	AC_MSG_ERROR([You need to install pkg-config])
 fi
-GLIB_REQUIRED_VERSION="2.2.3"
+GLIB_REQUIRED_VERSION="2.32.0"
 PKG_CHECK_MODULES(BASE_DEPENDENCIES, glib-2.0 >= $GLIB_REQUIRED_VERSION)
 
 GDIPLUS_LIBS="`$PKG_CONFIG --libs glib-2.0 `"
