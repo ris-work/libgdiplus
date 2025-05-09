@@ -130,11 +130,12 @@ GdipNewInstalledFontCollection (GpFontCollection **fontCollection)
 	 * (a) there is no API to free it;
 	 * (b) other libgdiplus structures depends on that allocated data;
 	 */
-	if (!system_fonts) {
+	if (g_once_init_enter(&system_fonts)) {
 		FcObjectSet *os = FcObjectSetBuild (FC_FAMILY, FC_FOUNDRY, NULL);
 		FcPattern *pat = FcPatternCreate ();
 		FcValue val;
 		FcFontSet *col;
+		GpFontCollection *sysfonts;
 
 		/* Only Scalable fonts for now */
 		val.type = FcTypeBool;
@@ -146,16 +147,16 @@ GdipNewInstalledFontCollection (GpFontCollection **fontCollection)
 		FcPatternDestroy (pat);
 		FcObjectSetDestroy (os);
     
-		system_fonts = (GpFontCollection *) GdipAlloc (sizeof (GpFontCollection));
-		if (!system_fonts)
-			return OutOfMemory;
+		sysfonts = (GpFontCollection *) GdipAlloc (sizeof (GpFontCollection));
 
-		system_fonts->fontset = col;
-		system_fonts->config = NULL;
+		sysfonts->fontset = col;
+		sysfonts->config = NULL;
 
 #if USE_PANGO_RENDERING
-		system_fonts->pango_font_map = pango_cairo_font_map_new_for_font_type (CAIRO_FONT_TYPE_FT);
+		sysfonts->pango_font_map = pango_cairo_font_map_new_for_font_type (CAIRO_FONT_TYPE_FT);
 #endif
+
+		g_once_init_leave(&system_fonts, sysfonts);
 	}
 
 	*fontCollection = system_fonts;
