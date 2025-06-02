@@ -1,0 +1,11 @@
+prefix=/root/eglib
+exec_prefix=${prefix}
+libdir=${exec_prefix}/src/
+includedir=${prefix}/src
+
+Name: GLib
+Description: Eglib shim acting as a stand‑in for GLib.
+Version: 2.34.0
+Libs: -L${libdir} -leglib
+Cflags: -I${includedir}
+
