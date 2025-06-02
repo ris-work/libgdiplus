@@ -1,3 +1,10 @@
+## Why does this fork exist?
+This fork does not depend on glib; it uses `Mono`'s clean-room reimplementation under MIT/X11 license.
+The most restrictive license down the chain now should be MPL (Cairo), I hope. The companion `eglib` is [here](https://github.com/ris-work/eglib). Add glib-2.0.pc to pkg-config and the rest should work. Put eglib in /root/eglib or modify `glib-2.0.pc`.
+
+### License
+Copyright (c) 2025 Rishikeshan Sulochana/Lavakumar, my contributions are under MIT/X11 license and so is this repository unless otherwise noted in other files.
+
 ## libgdiplus: An Open Source implementation of the GDI+ API.
 
 This is part of the [Mono project](http://www.mono-project.com/).
