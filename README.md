@@ -1,6 +1,17 @@
 ## Why does this fork exist?
 This fork does not depend on glib; it uses `Mono`'s clean-room reimplementation under MIT/X11 license.
-The most restrictive license down the chain now should be MPL (Cairo), I hope. The companion `eglib` is [here](https://github.com/ris-work/eglib). Add glib-2.0.pc to pkg-config and the rest should work. Put eglib in /root/eglib or modify `glib-2.0.pc`.
+The most restrictive license down the chain now should be MPL (Cairo), I hope. The companion `eglib` is [here](https://github.com/ris-work/eglib). Add glib-2.0.pc to pkg-config and the rest should work. Put eglib in /root/eglib or modify `glib-2.0.pc`. Oh, and we have HarfBuzz now (the default renderer in this, do not need Pango anymore unless you need spacing calculations). To compile:
+```
+export LIBS=-lharfbuzz -lharfbuzz-icu
+```
+
+This does not respect your font settings; use these instead:
+```
+export GDIPLUS_FONT_PATH=
+export GDIPLUS_EXTRA_CHAR_SPACING_FACTOR
+```
+default for fonts is `NotoSans-Regular.ttf`, **should be present in the working directory**.
+
 
 ### License
 Copyright (c) 2025 Rishikeshan Sulochana/Lavakumar, my contributions are under MIT/X11 license and so is this repository unless otherwise noted in other files.

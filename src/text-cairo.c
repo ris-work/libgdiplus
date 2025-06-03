@@ -26,6 +26,7 @@
 #include "gdiplus-private.h"
 
 #ifndef USE_PANGO_RENDERING
+#define HARFBUZZ_PRIVATE_2_IMPLEMENTATION
 
 #include <wctype.h>
 
@@ -34,6 +35,25 @@
 #include "graphics-cairo-private.h"
 #include "brush-private.h"
 #include "font-private.h"
+#include "harfbuzz-private.h"
+#include "harfbuzz-private-2.h"
+
+#include <harfbuzz/hb.h>
+#include <harfbuzz/hb-ft.h>
+
+/* Global HarfBuzz font pointer.
+ * Initialize it after creating the FT_Face, for example:
+ *
+ *     hb_font = hb_ft_font_create(ft_face, NULL);
+ *
+ * And remember to destroy it with:
+ *
+ *     hb_font_destroy(hb_font);
+ *
+ * when cleaning up.
+ */
+//hb_font_t *hb_font = NULL;
+
 
 /*
  * NOTE: all parameter's validations are done inside text.c
@@ -897,84 +917,94 @@ DrawString (GpGraphics *graphics, GDIPCONST WCHAR *stringUnicode, int length, GD
 		cairo_set_source_rgb (graphics->ct, 0., 0., 0.);
 	}
 
-	for (i=0; i<StringLen; i++) {
-		if (StringDetails[i].Flags & STRING_DETAIL_LINESTART) {
-			BYTE *String;
-			int length = StringDetails[i].LineLen;
+	/* --- Replacement For‑Loop Block --- */
+	init_text_shaping();
 
-			/* To support the LineLimit flag */
-			if ((StringDetails[i].Flags & STRING_DETAIL_HIDDEN)!=0){
+for (i = 0; i < StringLen; i++) {
+    if (StringDetails[i].Flags & STRING_DETAIL_LINESTART) {
+        BYTE *text_line;
+        int length = StringDetails[i].LineLen;
+
+        /* To support the LineLimit flag */
+        if (StringDetails[i].Flags & STRING_DETAIL_HIDDEN) {
 #ifdef DRAWSTRING_DEBUG
-				printf("Hidding partially visible line\n");
+            printf("Hiding partially visible line\n");
 #endif
-				i=StringLen;
-				continue;
-			}
+            i = StringLen;
+            continue;
+        }
 
-			if (length > StringLen - i)
-				length = StringLen - i;
-			String = (BYTE*) utf16_to_utf8 ((const gunichar2 *)(CleanString+i), length);
+        if (length > StringLen - i)
+            length = StringLen - i;
+        text_line = (BYTE*)utf16_to_utf8((const gunichar2*)(CleanString + i), length);
 #ifdef DRAWSTRING_DEBUG
-			printf("Displaying line >%s< (%d chars)\n", String, length);
+        printf("Displaying line >%s< (%d chars)\n", text_line, length);
 #endif
 
-			if ((fmt->formatFlags & StringFormatFlagsDirectionVertical)==0) {
-				CursorX = rc->X + StringDetails[i].PosX;
-				CursorY = rc->Y + StringDetails[i].PosY + LineHeight;
+        double CursorX, CursorY;
+        if ((fmt->formatFlags & StringFormatFlagsDirectionVertical) == 0) {
+            /* Horizontal rendering */
+            CursorX = rc->X + StringDetails[i].PosX;
+            CursorY = rc->Y + StringDetails[i].PosY + LineHeight;
 
-				gdip_cairo_move_to (graphics, CursorX, CursorY, FALSE, TRUE);
-				cairo_show_text (graphics->ct, (const char *) String);
-			} else {
-				CursorY = rc->Y + StringDetails[i].PosX;
-				CursorX = rc->X + StringDetails[i].PosY;
+            gdip_cairo_move_to(graphics, CursorX, CursorY, FALSE, TRUE);
+            /* Use HarfBuzz shaping in place of cairo_show_text */
+            RenderShapedText(graphics->ct, (const char *)text_line, hb_font,
+                             HB_DIRECTION_LTR, CursorX, CursorY);
+        } else {
+            /* Vertical rendering: swap offsets and rotate the context */
+            CursorY = rc->Y + StringDetails[i].PosX;
+            CursorX = rc->X + StringDetails[i].PosY;
 
-				/* Rotate text for vertical drawing */
-				cairo_save (graphics->ct);
-				gdip_cairo_move_to (graphics, CursorX, CursorY, FALSE, TRUE);
-				cairo_rotate (graphics->ct, PI/2);
-				cairo_show_text (graphics->ct, (const char *) String);
-				cairo_restore (graphics->ct);
-			}
-
+            cairo_save(graphics->ct);
+            gdip_cairo_move_to(graphics, CursorX, CursorY, FALSE, TRUE);
+            cairo_rotate(graphics->ct, PI / 2);
+            RenderShapedText(graphics->ct, (const char *)text_line, hb_font,
+                             HB_DIRECTION_TTB, 0, 0);
+            cairo_restore(graphics->ct);
+        }
 #ifdef DRAWSTRING_DEBUG
-			printf("Drawing %d chars at %d x %d (width=%f pixels)\n", StringDetails[i].LineLen, (int)CursorX, (int)CursorY, StringDetails[i+StringDetails[i].LineLen-1].PosX);
+        printf("Drawing %d chars at %d x %d (width=%f pixels)\n",
+               StringDetails[i].LineLen, (int)CursorX, (int)CursorY,
+               StringDetails[i + StringDetails[i].LineLen - 1].PosX);
 #endif
-			GdipFree (String);
+        GdipFree(text_line);
 
-			if (font->style & (FontStyleUnderline | FontStyleStrikeout)) {
-				double line_width = cairo_get_line_width (graphics->ct);
+        if (font->style & (FontStyleUnderline | FontStyleStrikeout)) {
+            double line_width = cairo_get_line_width(graphics->ct);
+            /* Calculate the width of the line */
+            cairo_set_line_width(graphics->ct, 1.0);
+            j = StringDetails[i + StringDetails[i].LineLen - 1].PosX +
+                StringDetails[i + StringDetails[i].LineLen - 1].Width;
 
-				/* Calculate the width of the line */
-				cairo_set_line_width (graphics->ct, 1.0);
-				j=StringDetails[i+StringDetails[i].LineLen-1].PosX+StringDetails[i+StringDetails[i].LineLen-1].Width;
+            if (font->style & FontStyleStrikeout) {
+                if ((fmt->formatFlags & StringFormatFlagsDirectionVertical) == 0) {
+                    gdip_cairo_move_to(graphics, CursorX, CursorY - FontExtent.descent, FALSE, TRUE);
+                    gdip_cairo_line_to(graphics, CursorX + j, CursorY - FontExtent.descent, FALSE, TRUE);
+                } else {
+                    gdip_cairo_move_to(graphics, CursorX + FontExtent.descent, CursorY, FALSE, TRUE);
+                    gdip_cairo_line_to(graphics, CursorX + FontExtent.descent, CursorY + j, FALSE, TRUE);
+                }
+            }
 
-				if (font->style & FontStyleStrikeout) {
-					if ((fmt->formatFlags & StringFormatFlagsDirectionVertical)==0) {
-						gdip_cairo_move_to (graphics, (int)(CursorX), (int)(CursorY-FontExtent.descent), FALSE, TRUE);
-						gdip_cairo_line_to (graphics, (int)(CursorX+j), (int)(CursorY-FontExtent.descent), FALSE, TRUE);
-					} else {
-						gdip_cairo_move_to (graphics, (int)(CursorX+FontExtent.descent), (int)(CursorY), FALSE, TRUE);
-						gdip_cairo_line_to (graphics, (int)(CursorX+FontExtent.descent), (int)(CursorY+j), FALSE, TRUE);
-					}
-				}
+            if (font->style & FontStyleUnderline) {
+                if ((fmt->formatFlags & StringFormatFlagsDirectionVertical) == 0) {
+                    gdip_cairo_move_to(graphics, CursorX, CursorY + FontExtent.descent - 2, FALSE, TRUE);
+                    gdip_cairo_line_to(graphics, CursorX + j, CursorY + FontExtent.descent - 2, FALSE, TRUE);
+                } else {
+                    gdip_cairo_move_to(graphics, CursorX + FontExtent.descent - 2, CursorY, FALSE, TRUE);
+                    gdip_cairo_line_to(graphics, CursorX + FontExtent.descent - 2, CursorY + j, FALSE, TRUE);
+                }
+            }
 
-				if (font->style & FontStyleUnderline) {
-					if ((fmt->formatFlags & StringFormatFlagsDirectionVertical)==0) {
-						gdip_cairo_move_to (graphics, (int)(CursorX), (int)(CursorY+FontExtent.descent-2), FALSE, TRUE);
-						gdip_cairo_line_to (graphics, (int)(CursorX+j), (int)(CursorY+FontExtent.descent-2), FALSE, TRUE);
-					} else {
-						gdip_cairo_move_to (graphics, (int)(CursorX+FontExtent.descent-2), (int)(CursorY), FALSE, TRUE);
-						gdip_cairo_line_to (graphics, (int)(CursorX+FontExtent.descent-2), (int)(CursorY+j), FALSE, TRUE);
-					}
-				}
+            cairo_stroke(graphics->ct);
+            cairo_set_line_width(graphics->ct, line_width);
+        }
 
-				cairo_stroke (graphics->ct);
-				cairo_set_line_width (graphics->ct, line_width);
-			}
+        i += StringDetails[i].LineLen - 1;
+    }
+}
 
-			i+=StringDetails[i].LineLen-1;
-		}
-	}
 
 	/* Handle Hotkey prefix */
 	if (fmt->hotkeyPrefix==HotkeyPrefixShow && data->has_hotkeys) {
@@ -1070,47 +1100,6 @@ cairo_DrawString (GpGraphics *graphics, GDIPCONST WCHAR *stringUnicode, INT leng
 	return status;
 }
 
-GpStatus
-cairo_MeasureString (GpGraphics *graphics, GDIPCONST WCHAR *stringUnicode, INT length, GDIPCONST GpFont *font, GDIPCONST RectF *rc,
-	GDIPCONST GpStringFormat *format,  RectF *boundingBox, INT *codepointsFitted, INT *linesFilled)
-{
-	cairo_matrix_t SavedMatrix;
-	GpStringFormat *fmt;
-	GpStringDetailStruct *StringDetails;
-	WCHAR *CleanString;
-	int StringLen = length;
-	GpStatus status;
-
-	status = AllocStringData (&CleanString, &StringDetails, length);
-	if (status != Ok)
-		return status;
-
-	/* a NULL format is valid, it means get the generic default values (and free them later) */
-	if (!format) {
-		GdipStringFormatGetGenericDefault ((GpStringFormat **)&fmt);
-	} else {
-		fmt = (GpStringFormat *)format;
-	}
-
-	/* is the following ok ? */
-	cairo_get_font_matrix (graphics->ct, &SavedMatrix);
-
-	status = MeasureString (graphics, stringUnicode, &StringLen, font, rc, fmt, NULL, boundingBox, codepointsFitted, 
-		linesFilled, CleanString, StringDetails, NULL);
-
-	/* Restore matrix to original values */
-	cairo_set_font_matrix (graphics->ct, &SavedMatrix);
-
-	/* Cleanup */
-	GdipFree (CleanString);
-	GdipFree (StringDetails);
-
-	/* we must delete the default stringformat (when one wasn't provided by the caller) */
-	if (format != fmt)
-		GdipDeleteStringFormat (fmt);
-
-	return status;
-}
 
 GpStatus
 cairo_MeasureCharacterRanges (GpGraphics *graphics, GDIPCONST WCHAR *stringUnicode, INT length, GDIPCONST GpFont *font, 

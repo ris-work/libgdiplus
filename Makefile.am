@@ -5,6 +5,15 @@ DIST_SUBDIRS = src tests
 
 pkgconfigdir = $(libdir)/pkgconfig
 
+# Add HarfBuzz include flags to your compiler flags
+AM_CPPFLAGS = $(HARFBUZZ_CFLAGS) $(AM_CPPFLAGS)
+
+# Append HarfBuzz libraries to the linker flags.
+# If you're building a library (say, libgdiplus.la),
+# ensure its link command includes $(HARFBUZZ_LIBS). For example:
+libgdiplus_la_LIBADD = $(HARFBUZZ_LIBS) $(LDADD)
+
+
 pkgconfig_DATA= libgdiplus.pc
 
 DISTCLEANFILES= libgdiplus.pc
