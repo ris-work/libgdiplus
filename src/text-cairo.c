@@ -35,7 +35,7 @@
 #include "brush-private.h"
 #include "font-private.h"
 #include "harfbuzz-private.h"
-#include "harfbuzz-private-2.h"
+//#include "harfbuzz-private-2.h"
 
 #include <harfbuzz/hb.h>
 #include <harfbuzz/hb-ft.h>
@@ -917,7 +917,7 @@ DrawString (GpGraphics *graphics, GDIPCONST WCHAR *stringUnicode, int length, GD
 	}
 
 	/* --- Replacement For‑Loop Block --- */
-	init_hb_font("NotoSans-Regular.ttf");
+	init_text_shaping();
 
 for (i = 0; i < StringLen; i++) {
     if (StringDetails[i].Flags & STRING_DETAIL_LINESTART) {
