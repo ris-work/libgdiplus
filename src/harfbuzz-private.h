@@ -14,6 +14,21 @@
 #ifndef PI
 #define PI 3.14159265358979323846
 #endif
+#include <cairo.h>
+
+/* Fallback: If your Cairo version doesn't provide cairo_get_font_size,
+   define it using cairo_get_font_matrix. This assumes that the scaling
+   is uniform (i.e., the x-scale is the font size).
+*/
+#ifndef HAVE_CAIRO_GET_FONT_SIZE
+double cairo_get_font_size(cairo_t *cr)
+{
+    cairo_matrix_t matrix;
+    cairo_get_font_matrix(cr, &matrix);
+    return matrix.xx; /* Assumes uniform scaling (matrix.xx equals font size) */
+}
+#endif
+
 
 /*
  * RenderShapedText:
@@ -31,15 +46,13 @@
 void RenderShapedText(cairo_t *ct, const char *text, hb_font_t *hb_font,
                       hb_direction_t direction, double startX, double startY)
 {
+    /* Create and configure a HarfBuzz buffer */
     hb_buffer_t *buf = hb_buffer_create();
     hb_buffer_set_unicode_funcs(buf, hb_icu_get_unicode_funcs());
     hb_buffer_set_direction(buf, direction);
     hb_buffer_add_utf8(buf, text, -1, 0, -1);
 
-    /*
-     * Explicitly enable the kerning feature.
-     * This ensures that if the font provides kerning data, it will be used.
-     */
+    /* Enable kerning explicitly */
     hb_feature_t features[] = {
         { HB_TAG('k','e','r','n'), 1, 0, (unsigned int)-1 }
     };
@@ -53,18 +66,20 @@ void RenderShapedText(cairo_t *ct, const char *text, hb_font_t *hb_font,
 
     double x = startX;
     double y = startY;
+    double font_size = cairo_get_font_size(ct);
 
-    /*
-     * If you want to add extra spacing (tracking), set this value (in device units).
-     * Set to 0 for default spacing.
+    /* Extra spacing multiplier.
+     * GDIPLUS_EXTRA_CHAR_SPACING_FACTOR is a unique constant you can adjust.
+     * For example, if set to 0.1 and font_size is 12, an extra 1.2 pixels is added.
      */
-    double tracking = 0;  // For example, try 1.0 or 2.0 if you need more space.
+    #define GDIPLUS_EXTRA_CHAR_SPACING_FACTOR 0.1
+    double extra_spacing = font_size * GDIPLUS_EXTRA_CHAR_SPACING_FACTOR;
 
     for (unsigned int j = 0; j < glyph_count; j++) {
         cairo_glyphs[j].index = glyph_info[j].codepoint;
         cairo_glyphs[j].x = x + glyph_pos[j].x_offset / 64.0;
         cairo_glyphs[j].y = y - glyph_pos[j].y_offset / 64.0;
-        x += glyph_pos[j].x_advance / 64.0 + tracking;
+        x += glyph_pos[j].x_advance / 64.0 + extra_spacing;
         y -= glyph_pos[j].y_advance / 64.0;
     }
 
