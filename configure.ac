@@ -22,6 +22,17 @@ if test "x$PKG_CONFIG" = "xno"; then
 fi
 GLIB_REQUIRED_VERSION="2.32.0"
 PKG_CHECK_MODULES(BASE_DEPENDENCIES, glib-2.0 >= $GLIB_REQUIRED_VERSION)
+# Check for HarfBuzz (requires version 1.4 or later)
+PKG_CHECK_MODULES([HARFBUZZ], [harfbuzz >= 1.4],
+    [],
+    [AC_MSG_ERROR([harfbuzz is required to build this project])])
+# Check for HarfBuzz (version 1.4 or later is recommended)
+PKG_CHECK_MODULES([HARFBUZZ], [harfbuzz >= 1.4],
+  [AC_SUBST(HARFBUZZ_CFLAGS)
+   AC_SUBST(HARFBUZZ_LIBS)],
+  [AC_MSG_ERROR([harfbuzz is required to build this project])])
+
+
 
 GDIPLUS_LIBS="`$PKG_CONFIG --libs glib-2.0 `"
 GDIPLUS_INCLUDES="`$PKG_CONFIG --cflags-only-I glib-2.0 `"
