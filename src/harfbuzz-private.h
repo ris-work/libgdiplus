@@ -35,21 +35,39 @@ void RenderShapedText(cairo_t *ct, const char *text, hb_font_t *hb_font,
     hb_buffer_set_unicode_funcs(buf, hb_icu_get_unicode_funcs());
     hb_buffer_set_direction(buf, direction);
     hb_buffer_add_utf8(buf, text, -1, 0, -1);
-    hb_shape(hb_font, buf, NULL, 0);
+
+    /*
+     * Explicitly enable the kerning feature.
+     * This ensures that if the font provides kerning data, it will be used.
+     */
+    hb_feature_t features[] = {
+        { HB_TAG('k','e','r','n'), 1, 0, (unsigned int)-1 }
+    };
+    hb_shape(hb_font, buf, features, 1);
 
     unsigned int glyph_count = 0;
     hb_glyph_info_t *glyph_info = hb_buffer_get_glyph_infos(buf, &glyph_count);
     hb_glyph_position_t *glyph_pos = hb_buffer_get_glyph_positions(buf, &glyph_count);
 
     cairo_glyph_t *cairo_glyphs = malloc(glyph_count * sizeof(cairo_glyph_t));
-    double x = startX, y = startY;
+
+    double x = startX;
+    double y = startY;
+
+    /*
+     * If you want to add extra spacing (tracking), set this value (in device units).
+     * Set to 0 for default spacing.
+     */
+    double tracking = 0;  // For example, try 1.0 or 2.0 if you need more space.
+
     for (unsigned int j = 0; j < glyph_count; j++) {
         cairo_glyphs[j].index = glyph_info[j].codepoint;
         cairo_glyphs[j].x = x + glyph_pos[j].x_offset / 64.0;
         cairo_glyphs[j].y = y - glyph_pos[j].y_offset / 64.0;
-        x += glyph_pos[j].x_advance / 64.0;
+        x += glyph_pos[j].x_advance / 64.0 + tracking;
         y -= glyph_pos[j].y_advance / 64.0;
     }
+
     cairo_show_glyphs(ct, cairo_glyphs, glyph_count);
     free(cairo_glyphs);
     hb_buffer_destroy(buf);
