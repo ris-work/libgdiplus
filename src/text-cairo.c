@@ -917,7 +917,7 @@ DrawString (GpGraphics *graphics, GDIPCONST WCHAR *stringUnicode, int length, GD
 	}
 
 	/* --- Replacement For‑Loop Block --- */
-	init_hb_font("Gourier.ttf");
+	init_hb_font("NotoSans-Regular.ttf");
 
 for (i = 0; i < StringLen; i++) {
     if (StringDetails[i].Flags & STRING_DETAIL_LINESTART) {
