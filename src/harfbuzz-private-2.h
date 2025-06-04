@@ -43,9 +43,6 @@ extern void init_text_shaping(void);
 
 #ifdef HARFBUZZ_PRIVATE_2_IMPLEMENTATION
 
-/*
- * External (non-inline) definition for cairo_MeasureString.
- */
 int cairo_MeasureString(
     GpGraphics            *graphics,
     const unsigned short  *stringUnicode,
@@ -57,30 +54,35 @@ int cairo_MeasureString(
     int                   *codepointsFitted,
     int                   *linesFilled)
 {
-    /* Initialize text shaping */
+    /* 1. Initialize text shaping and set the Cairo font face. */
     init_text_shaping();
     cairo_set_font_face(graphics->ct, g_cairo_face);
 
     cairo_matrix_t originalMatrix;
     cairo_get_font_matrix(graphics->ct, &originalMatrix);
 
+    /* 2. Convert the input UTF-16 string to UTF-8. */
     char *utf8Text = utf16_to_utf8(stringUnicode, length);
     if (!utf8Text)
         return OutOfMemory;
 
     GpStringFormat *fmt;
     int status = Ok;
-    if (!format) {
+    if (!format)
+    {
         status = GdipStringFormatGetGenericDefault(&fmt);
-        if (status != Ok) {
+        if (status != Ok)
+        {
             GdipFree(utf8Text);
             return status;
         }
-    } else {
+    }
+    else
+    {
         fmt = (GpStringFormat *)format;
     }
-    
-    /* Create the HarfBuzz buffer and shape the text */
+
+    /* 3. Create the HarfBuzz buffer, set properties, and shape the text. */
     hb_buffer_t *buf = hb_buffer_create();
     hb_buffer_set_unicode_funcs(buf, hb_icu_get_unicode_funcs());
     hb_buffer_set_direction(buf, HB_DIRECTION_LTR);
@@ -89,75 +91,25 @@ int cairo_MeasureString(
     hb_feature_t features[] = { { HB_TAG('k','e','r','n'), 1, 0, (unsigned int)-1 } };
     hb_shape(g_hb_font, buf, features, 1);
 
+    /* 4. Retrieve glyph information and compute the total advance width. */
     unsigned int glyph_count = 0;
     hb_glyph_info_t *glyph_info = hb_buffer_get_glyph_infos(buf, &glyph_count);
     hb_glyph_position_t *glyph_pos = hb_buffer_get_glyph_positions(buf, &glyph_count);
 
-    /* Compute raw total glyph advance (A) and count visual clusters */
-    double totalGlyphAdvance = 0.0;
-    int num_clusters = 0;
-    if (glyph_count > 0) {
-        totalGlyphAdvance = glyph_pos[0].x_advance / 64.0;
-        num_clusters = 1;
-        int lastCluster = glyph_info[0].cluster;
-        for (unsigned int i = 1; i < glyph_count; i++) {
-            totalGlyphAdvance += glyph_pos[i].x_advance / 64.0;
-            if ((int)glyph_info[i].cluster != lastCluster) {
-                num_clusters++;
-                lastCluster = glyph_info[i].cluster;
-            }
-        }
-    }
-
-    /* Compute extra spacing total (E) */
-    double font_size = cairo_get_font_size(graphics->ct);
-    double extra_spacing = font_size * g_extra_char_spacing_factor;
-    double totalExtraSpacing = (num_clusters - 1) * extra_spacing;
-
-    /* Compute effective scale so that:
-         (effective_scale * A) + E = A    ==> effective_scale = (A - E) / A */
-    double computed_scale = 1.0;
-    if (totalGlyphAdvance > 0 && totalGlyphAdvance > totalExtraSpacing)
-        computed_scale = (totalGlyphAdvance - totalExtraSpacing) / totalGlyphAdvance;
-    
-    /* Allow override via "GDIPLUS_HORIZONTAL_SCALE" */
-    double effective_scale = computed_scale;
+    double finalWidth = 0.0;
+    for (unsigned int i = 0; i < glyph_count; i++)
     {
-        const char *scaleEnv = getenv("GDIPLUS_HORIZONTAL_SCALE");
-        if (scaleEnv && scaleEnv[0] != '\0') {
-            double env_scale = atof(scaleEnv);
-            if (env_scale > 0)
-                effective_scale = env_scale;
-        }
+        finalWidth += glyph_pos[i].x_advance / 64.0;
     }
-    /* Now apply a constant multiplier from "GDIPLUS_HORIZONTAL_SCALE_MULTIPLIER" */
-    double multiplier = 1.0;
-    {
-        const char *multEnv = getenv("GDIPLUS_HORIZONTAL_SCALE_MULTIPLIER");
-        if (multEnv && multEnv[0] != '\0') {
-            double env_mult = atof(multEnv);
-            if (env_mult > 0)
-                multiplier = env_mult;
-        }
-    }
-    effective_scale *= multiplier;
 
-    /* Apply the computed horizontal scale to the cairo font matrix */
-    cairo_matrix_t scaledMatrix = originalMatrix;
-    scaledMatrix.xx *= effective_scale;
-    cairo_set_font_matrix(graphics->ct, &scaledMatrix);
-
-    /* The final measured width is:
-             finalWidth = (effective_scale * A) + E
-    */
-    double finalWidth = (effective_scale * totalGlyphAdvance) + totalExtraSpacing;
-
-    /* Obtain Cairo font extents and set the output bounding box */
+    /* 5. Obtain Cairo font extents for height information. */
     cairo_font_extents_t fe;
     cairo_scaled_font_t *scaled = cairo_get_scaled_font(graphics->ct);
     cairo_scaled_font_extents(scaled, &fe);
 
-    if (boundingBox) {
+    /* 6. Set the measured bounding box and codepoints/lines info. */
+    if (boundingBox)
+    {
         boundingBox->X = 0;
         boundingBox->Y = 0;
         boundingBox->Width = finalWidth;
@@ -168,14 +120,13 @@ int cairo_MeasureString(
     if (linesFilled)
         *linesFilled = 1;
 
+    /* 7. Clean up and restore the original font matrix. */
     hb_buffer_destroy(buf);
     GdipFree(utf8Text);
     if (!format)
         GdipDeleteStringFormat(fmt);
 
-    /* Restore original font matrix */
     cairo_set_font_matrix(graphics->ct, &originalMatrix);
-
     return status;
 }
 
@@ -185,8 +136,8 @@ static inline int cairo_MeasureString(
     GpGraphics            *graphics,
     const unsigned short  *stringUnicode,
     int                    length,
-    const void            *font,
-    const RectF           *rc,
+    const void            *font,       /* Ignored in this implementation */
+    const RectF           *rc,         /* Ignored in this implementation */
     const void            *format,
     RectF                 *boundingBox,
     int                   *codepointsFitted,
@@ -201,19 +152,23 @@ static inline int cairo_MeasureString(
     char *utf8Text = utf16_to_utf8(stringUnicode, length);
     if (!utf8Text)
         return OutOfMemory;
-    
+
     GpStringFormat *fmt;
     int status = Ok;
-    if (!format) {
+    if (!format)
+    {
         status = GdipStringFormatGetGenericDefault(&fmt);
-        if (status != Ok) {
+        if (status != Ok)
+        {
             GdipFree(utf8Text);
             return status;
         }
-    } else {
+    }
+    else
+    {
         fmt = (GpStringFormat *)format;
     }
-    
+
     hb_buffer_t *buf = hb_buffer_create();
     hb_buffer_set_unicode_funcs(buf, hb_icu_get_unicode_funcs());
     hb_buffer_set_direction(buf, HB_DIRECTION_LTR);
@@ -226,60 +181,18 @@ static inline int cairo_MeasureString(
     hb_glyph_info_t *glyph_info = hb_buffer_get_glyph_infos(buf, &glyph_count);
     hb_glyph_position_t *glyph_pos = hb_buffer_get_glyph_positions(buf, &glyph_count);
 
-    double totalGlyphAdvance = 0.0;
-    int num_clusters = 0;
-    if (glyph_count > 0) {
-        totalGlyphAdvance = glyph_pos[0].x_advance / 64.0;
-        num_clusters = 1;
-        int lastCluster = glyph_info[0].cluster;
-        for (unsigned int i = 1; i < glyph_count; i++) {
-            totalGlyphAdvance += glyph_pos[i].x_advance / 64.0;
-            if ((int)glyph_info[i].cluster != lastCluster) {
-                num_clusters++;
-                lastCluster = glyph_info[i].cluster;
-            }
-        }
-    }
-    
-    double font_size = cairo_get_font_size(graphics->ct);
-    double extra_spacing = font_size * g_extra_char_spacing_factor;
-    double totalExtraSpacing = (num_clusters - 1) * extra_spacing;
-
-    double computed_scale = 1.0;
-    if (totalGlyphAdvance > 0 && totalGlyphAdvance > totalExtraSpacing)
-        computed_scale = (totalGlyphAdvance - totalExtraSpacing) / totalGlyphAdvance;
-    
-    double effective_scale = computed_scale;
+    double finalWidth = 0.0;
+    for (unsigned int i = 0; i < glyph_count; i++)
     {
-        const char *scaleEnv = getenv("GDIPLUS_HORIZONTAL_SCALE");
-        if (scaleEnv && scaleEnv[0] != '\0') {
-            double env_scale = atof(scaleEnv);
-            if (env_scale > 0)
-                effective_scale = env_scale;
-        }
+        finalWidth += glyph_pos[i].x_advance / 64.0;
     }
-    double multiplier = 1.0;
-    {
-        const char *multEnv = getenv("GDIPLUS_HORIZONTAL_SCALE_MULTIPLIER");
-        if (multEnv && multEnv[0] != '\0') {
-            double env_mult = atof(multEnv);
-            if (env_mult > 0)
-                multiplier = env_mult;
-        }
-    }
-    effective_scale *= multiplier;
-
-    cairo_matrix_t scaledMatrix = originalMatrix;
-    scaledMatrix.xx *= effective_scale;
-    cairo_set_font_matrix(graphics->ct, &scaledMatrix);
-
-    double finalWidth = (effective_scale * totalGlyphAdvance) + totalExtraSpacing;
 
     cairo_font_extents_t fe;
     cairo_scaled_font_t *scaled = cairo_get_scaled_font(graphics->ct);
     cairo_scaled_font_extents(scaled, &fe);
 
-    if (boundingBox) {
+    if (boundingBox)
+    {
         boundingBox->X = 0;
         boundingBox->Y = 0;
         boundingBox->Width = finalWidth;
@@ -296,11 +209,11 @@ static inline int cairo_MeasureString(
         GdipDeleteStringFormat(fmt);
 
     cairo_set_font_matrix(graphics->ct, &originalMatrix);
-
     return status;
 }
 
-#endif  /* HARFBUZZ_PRIVATE_2_IMPLEMENTATION */
+#endif
+
 
 /* ---------------------------------------------------------------------------
    RenderShapedText: Renders the text using similar dynamic squishing logic.

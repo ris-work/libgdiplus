@@ -119,6 +119,20 @@ cairo_font_face_t *cairo_face = cairo_ft_font_face_create_for_ft_face(ft_face, 0
 
 // Optionally also set the font size if needed:
 //cairo_set_font_size(cr, desired_font_size);
+    // Optionally override the default pixel size using the "GDIPLUS_FONT_SIZE" environment variable.
+    const char *env_font_size = getenv("GDIPLUS_FONT_SIZE");
+    int pixel_size = 12;  // Default value.
+    if (env_font_size && env_font_size[0] != '\0')
+    {
+        pixel_size = atoi(env_font_size);
+        if (pixel_size <= 0)
+            pixel_size = 12;
+    }
+    if (FT_Set_Pixel_Sizes(ft_face, 0, pixel_size)) {
+        fprintf(stderr, "Error: Could not set pixel size on the font face to %d\n", pixel_size);
+        exit(EXIT_FAILURE);
+    }
+
     
     g_text_shaping_initialized = 1;
     
