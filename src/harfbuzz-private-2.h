@@ -30,7 +30,7 @@ extern void GdipFree(void *ptr);
 /* Global variables used for HarfBuzz shaping:
    These must be defined and initialized elsewhere in libgdiplus.
 */
-extern hb_font_t     *hb_font;
+extern hb_font_t     *g_hb_font;
 extern hb_language_t  g_hb_language;
 extern double         g_extra_char_spacing_factor;
 
@@ -86,7 +86,7 @@ int cairo_MeasureString(
     hb_buffer_set_language(buf, g_hb_language);
     hb_buffer_add_utf8(buf, utf8Text, -1, 0, -1);
     hb_feature_t features[] = { { HB_TAG('k','e','r','n'), 1, 0, (unsigned int)-1 } };
-    hb_shape(hb_font, buf, features, 1);
+    hb_shape(g_hb_font, buf, features, 1);
 
     unsigned int glyph_count = 0;
     hb_glyph_info_t *glyph_info = hb_buffer_get_glyph_infos(buf, &glyph_count);
@@ -218,7 +218,7 @@ static inline int cairo_MeasureString(
     hb_buffer_set_language(buf, g_hb_language);
     hb_buffer_add_utf8(buf, utf8Text, -1, 0, -1);
     hb_feature_t features[] = { { HB_TAG('k','e','r','n'), 1, 0, (unsigned int)-1 } };
-    hb_shape(hb_font, buf, features, 1);
+    hb_shape(g_hb_font, buf, features, 1);
 
     unsigned int glyph_count = 0;
     hb_glyph_info_t *glyph_info = hb_buffer_get_glyph_infos(buf, &glyph_count);

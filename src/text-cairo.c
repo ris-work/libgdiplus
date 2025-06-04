@@ -949,7 +949,7 @@ for (i = 0; i < StringLen; i++) {
 
             gdip_cairo_move_to(graphics, CursorX, CursorY, FALSE, TRUE);
             /* Use HarfBuzz shaping in place of cairo_show_text */
-            RenderShapedText(graphics->ct, (const char *)text_line, hb_font,
+            RenderShapedText(graphics->ct, (const char *)text_line, g_hb_font,
                              HB_DIRECTION_LTR, CursorX, CursorY);
         } else {
             /* Vertical rendering: swap offsets and rotate the context */
@@ -959,7 +959,7 @@ for (i = 0; i < StringLen; i++) {
             cairo_save(graphics->ct);
             gdip_cairo_move_to(graphics, CursorX, CursorY, FALSE, TRUE);
             cairo_rotate(graphics->ct, PI / 2);
-            RenderShapedText(graphics->ct, (const char *)text_line, hb_font,
+            RenderShapedText(graphics->ct, (const char *)text_line, g_hb_font,
                              HB_DIRECTION_TTB, 0, 0);
             cairo_restore(graphics->ct);
         }

@@ -22,7 +22,7 @@ extern "C" {
 #include <harfbuzz/hb-icu.h>
 
 /* Global state variables (static to this translation unit) */
-static hb_font_t   *hb_font = NULL;
+static hb_font_t   *g_hb_font = NULL;
 static FT_Library   ft_library = NULL;
 static FT_Face      ft_face = NULL;
 static double       g_extra_char_spacing_factor = 0.15;
@@ -95,8 +95,8 @@ static inline void init_text_shaping(void)
         exit(EXIT_FAILURE);
     }
     
-    hb_font = hb_ft_font_create(ft_face, NULL);
-    if (!hb_font) {
+    g_hb_font = hb_ft_font_create(ft_face, NULL);
+    if (!g_hb_font) {
         fprintf(stderr, "Error: Could not create HarfBuzz font\n");
         exit(EXIT_FAILURE);
     }
@@ -120,9 +120,9 @@ static inline void init_text_shaping(void)
  */
 static inline void cleanup_text_shaping(void)
 {
-    if (hb_font) {
-        hb_font_destroy(hb_font);
-        hb_font = NULL;
+    if (g_hb_font) {
+        hb_font_destroy(g_hb_font);
+        g_hb_font = NULL;
     }
     if (ft_face) {
         FT_Done_Face(ft_face);
@@ -191,7 +191,7 @@ static inline void RenderShapedText(cairo_t *ct, const char *text, hb_font_t *hb
     hb_buffer_add_utf8(buf, text, -1, 0, -1);
 
     hb_feature_t features[] = { { HB_TAG('k','e','r','n'), 1, 0, (unsigned int)-1 } };
-    hb_shape(hb_font, buf, features, 1);
+    hb_shape(g_hb_font, buf, features, 1);
 
     /* 4. Retrieve the glyph information and positions from HarfBuzz */
     unsigned int glyph_count = 0;
