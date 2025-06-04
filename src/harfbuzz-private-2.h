@@ -107,9 +107,37 @@ int cairo_MeasureString(
     double totalAdvance = 0.0;
     double font_size = cairo_get_font_size(graphics->ct);
     double extra_spacing = font_size * g_extra_char_spacing_factor;
-    for (unsigned int i = 0; i < glyph_count; i++) {
-        totalAdvance += (glyph_pos[i].x_advance / 64.0) + extra_spacing;
+        /* New code: add extra spacing only between clusters */
+    hb_glyph_info_t *glyph_info = hb_buffer_get_glyph_infos(buf, &glyph_count);
+    //hb_glyph_position_t *glyph_pos = hb_buffer_get_glyph_positions(buf, &glyph_count);
+    double cumulativeSpacing = 0.0;
+
+
+if (glyph_count > 0)
+{
+    int lastCluster = glyph_info[0].cluster;
+    totalAdvance += glyph_pos[0].x_advance / 64.0;
+
+    for (unsigned int i = 1; i < glyph_count; i++) {
+        // Check if this glyph starts a new cluster (visible character boundary)
+        if ((int)glyph_info[i].cluster != lastCluster) {
+            cumulativeSpacing += extra_spacing;
+            lastCluster = glyph_info[i].cluster;
+        }
+
+        totalAdvance += glyph_pos[i].x_advance / 64.0;
     }
+
+    // Correct caret offset drift every 25 characters
+    if (glyph_count >= 25) {
+        double correction = (cumulativeSpacing * 4) / glyph_count;
+        totalAdvance -= correction;  // Apply spacing correction across all glyphs
+    }
+}
+
+    /*for (unsigned int i = 0; i < glyph_count; i++) {
+        totalAdvance += (glyph_pos[i].x_advance / 64.0) + extra_spacing;
+    }*/
 
     cairo_font_extents_t fe;
     cairo_scaled_font_t *scaled = cairo_get_scaled_font(graphics->ct);
@@ -188,14 +216,37 @@ static inline int cairo_MeasureString(
 
     unsigned int glyph_count = 0;
     hb_buffer_get_glyph_infos(buf, &glyph_count);
+    hb_glyph_info_t *glyph_info = hb_buffer_get_glyph_infos(buf, &glyph_count);
     hb_glyph_position_t *glyph_pos = hb_buffer_get_glyph_positions(buf, &glyph_count);
 
     double totalAdvance = 0.0;
     double font_size = cairo_get_font_size(graphics->ct);
     double extra_spacing = font_size * g_extra_char_spacing_factor;
-    for (unsigned int i = 0; i < glyph_count; i++) {
-        totalAdvance += (glyph_pos[i].x_advance / 64.0) + extra_spacing;
+    double cumulativeSpacing = 0.0;
+    int num_clusters = 0;
+
+if (glyph_count > 0)
+{
+    int lastCluster = glyph_info[0].cluster;
+    totalAdvance += glyph_pos[0].x_advance / 64.0;
+
+    for (unsigned int i = 1; i < glyph_count; i++) {
+        // Check if this glyph starts a new cluster (visible character boundary)
+        if ((int)glyph_info[i].cluster != lastCluster) {
+            cumulativeSpacing += extra_spacing;
+            lastCluster = glyph_info[i].cluster;
+        }
+
+        totalAdvance += glyph_pos[i].x_advance / 64.0;
     }
+
+    // Correct caret offset drift every 25 characters
+        double k = 1.1;  /* adjust this factor by trial—experiment until the caret lines up */
+    totalAdvance += (num_clusters - 1) * extra_spacing * k;
+}
+    /*for (unsigned int i = 0; i < glyph_count; i++) {
+        totalAdvance += (glyph_pos[i].x_advance / 64.0) + extra_spacing;
+    }*/
 
     cairo_font_extents_t fe;
     cairo_scaled_font_t *scaled = cairo_get_scaled_font(graphics->ct);

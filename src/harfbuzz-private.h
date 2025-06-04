@@ -27,6 +27,7 @@ static FT_Library   ft_library = NULL;
 static FT_Face      ft_face = NULL;
 static double       g_extra_char_spacing_factor = 0.15;
 static int          g_text_shaping_initialized = 0;
+static hb_language_t  g_hb_language = NULL;
 
 /**
  * gdiplus_get_font_path
@@ -83,6 +84,15 @@ static inline void init_text_shaping(void)
     if (FT_Set_Pixel_Sizes(ft_face, 0, 12)) {
         fprintf(stderr, "Error: Could not set pixel size on the font face\n");
         exit(EXIT_FAILURE);
+    }
+    {
+        const char *lang_env = getenv("GDIPLUS_HARFBUZZ_LANGUAGE");
+        if (lang_env && lang_env[0] != '\0')
+            g_hb_language = hb_language_from_string(lang_env, -1);
+        else
+            g_hb_language = hb_language_from_string("en", -1);  /* default to English */
+
+        printf("Using HarfBuzz language: %s\n", lang_env ? lang_env : "en");
     }
     
     hb_font = hb_ft_font_create(ft_face, NULL);
