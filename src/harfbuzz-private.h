@@ -184,7 +184,7 @@ static inline void RenderShapedText(cairo_t *ct, const char *text, hb_font_t *hb
     
     for (unsigned int j = 0; j < glyph_count; j++) {
         cairo_glyphs[j].index = glyph_info[j].codepoint;
-        cairo_glyphs[j].x = x + glyph_pos[j].x_offset / 64.0;
+        cairo_glyphs[j].x = x + extra_spacing + glyph_pos[j].x_offset / 64.0;
         cairo_glyphs[j].y = y - glyph_pos[j].y_offset / 64.0;
         x += glyph_pos[j].x_advance / 64.0 + extra_spacing;
         y -= glyph_pos[j].y_advance / 64.0;

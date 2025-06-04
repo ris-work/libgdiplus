@@ -196,6 +196,20 @@ static inline int cairo_MeasureString(
     for (unsigned int i = 0; i < glyph_count; i++) {
         totalAdvance += (glyph_pos[i].x_advance / 64.0) + extra_spacing;
     }
+    if (glyph_count > 0) {
+    totalAdvance = glyph_pos[0].x_advance / 64.0;
+    totalAdvance = 0.0;
+    num_clusters = 1;
+    int lastCluster = glyph_info[0].cluster;
+    for (unsigned int i = 1; i < glyph_count; i++) {
+        totalAdvance += glyph_pos[i].x_advance / 64.0;
+        if ((int)glyph_info[i].cluster != lastCluster) {
+            num_clusters++;
+            lastCluster = glyph_info[i].cluster;
+        }
+    }
+    totalAdvance += (num_clusters - 1) * extra_spacing;
+}
 
     cairo_font_extents_t fe;
     cairo_scaled_font_t *scaled = cairo_get_scaled_font(graphics->ct);
