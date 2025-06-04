@@ -8,9 +8,9 @@ export LIBS=-lharfbuzz -lharfbuzz-icu
 This does not respect your font settings; use these instead:
 ```
 export GDIPLUS_FONT_PATH=
-export GDIPLUS_EXTRA_CHAR_SPACING_FACTOR
+export GDIPLUS_FONT_SIZE=
 ```
-default for fonts is `NotoSans-Regular.ttf`, **should be present in the working directory**.
+default for fonts is `NotoSans-Regular.ttf`, **should be present in the working directory**. Also: HarfBuzz script can be set at `g_hb_script` enum (`harfbuzz-private.h`). The default is set to Tamil. Or you can build it with Pango if you want (LGPL) but might as well use the LGPL'd `glib` then.
 
 
 ### License
