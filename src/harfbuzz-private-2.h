@@ -22,6 +22,8 @@ extern "C" {
 /* Internal libgdiplus headers */
 #include "graphics-private.h"   /* Provides GpGraphics, RectF, etc. */
 #include "stringformat.h"       /* Declares GdipStringFormatGetGenericDefault(), GdipDeleteStringFormat() */
+/* In your header file, e.g., harfbuzz-private-2.h */
+extern hb_script_t g_hb_script;
 
 /* Forward declarations for helper routines (provided elsewhere in libgdiplus) */
 extern char *utf16_to_utf8(const unsigned short *input, int length);
@@ -87,6 +89,7 @@ int cairo_MeasureString(
     hb_buffer_set_unicode_funcs(buf, hb_icu_get_unicode_funcs());
     hb_buffer_set_direction(buf, HB_DIRECTION_LTR);
     hb_buffer_set_language(buf, g_hb_language);
+    hb_buffer_set_script(buf, g_hb_script);
     hb_buffer_add_utf8(buf, utf8Text, -1, 0, -1);
     hb_feature_t features[] = { { HB_TAG('k','e','r','n'), 1, 0, (unsigned int)-1 } };
     hb_shape(g_hb_font, buf, features, 1);
@@ -173,6 +176,7 @@ static inline int cairo_MeasureString(
     hb_buffer_set_unicode_funcs(buf, hb_icu_get_unicode_funcs());
     hb_buffer_set_direction(buf, HB_DIRECTION_LTR);
     hb_buffer_set_language(buf, g_hb_language);
+    hb_buffer_set_script(buf, g_hb_script);
     hb_buffer_add_utf8(buf, utf8Text, -1, 0, -1);
     hb_feature_t features[] = { { HB_TAG('k','e','r','n'), 1, 0, (unsigned int)-1 } };
     hb_shape(g_hb_font, buf, features, 1);

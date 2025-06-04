@@ -31,6 +31,9 @@ static FT_Face      ft_face = NULL;
 static double       g_extra_char_spacing_factor = 0.15;
 static int          g_text_shaping_initialized = 0;
 hb_language_t g_hb_language;
+/* In your header file, e.g., harfbuzz-private-2.h */
+//extern hb_script_t g_hb_script;
+hb_script_t g_hb_script = HB_SCRIPT_TAMIL;
 
 /**
  * gdiplus_get_font_path
@@ -207,6 +210,8 @@ static inline void RenderShapedText(cairo_t *ct, const char *text, hb_font_t *hb
     hb_buffer_set_unicode_funcs(buf, hb_icu_get_unicode_funcs());
     hb_buffer_set_direction(buf, direction);
     hb_buffer_set_language(buf, g_hb_language);
+    hb_buffer_set_script(buf, g_hb_script);
+
     hb_buffer_add_utf8(buf, text, -1, 0, -1);
     hb_feature_t features[] = { { HB_TAG('k','e','r','n'), 1, 0, (unsigned int)-1 } };
     hb_shape(g_hb_font, buf, features, 1);
