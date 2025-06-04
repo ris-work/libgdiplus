@@ -23,6 +23,7 @@ extern "C" {
 #include <harfbuzz/hb-icu.h>
 
 /* Global state variables (static to this translation unit) */
+	static double g_default_font_size = 12.0;
 	cairo_font_face_t *g_cairo_face = NULL;
 static hb_font_t   *g_hb_font = NULL;
 static FT_Library   ft_library = NULL;
@@ -185,130 +186,38 @@ static inline double cairo_get_font_size(cairo_t *cr)
 static inline void RenderShapedText(cairo_t *ct, const char *text, hb_font_t *hb_font,
                                     hb_direction_t direction, double startX, double startY)
 {
-    /* 1. Initialize text shaping (load fonts, set language, etc.).
-       This call should be safe to call repeatedly.
-    */
+    // Initialize text shaping and set the Cairo font face.
     init_text_shaping();
     cairo_set_font_face(ct, g_cairo_face);
+    cairo_set_font_size(ct, g_default_font_size);
 
-    /* 2. Save the current Cairo font matrix so that we can restore it later.
-       We will modify the horizontal scaling factor here.
-    */
-    cairo_matrix_t originalMatrix;
-    cairo_get_font_matrix(ct, &originalMatrix);
-
-    /* 3. Create a HarfBuzz buffer and shape the text.
-       We set the language and direction, then add the UTF-8 text.
-    */
+    // Create a HarfBuzz buffer and shape the text.
     hb_buffer_t *buf = hb_buffer_create();
     hb_buffer_set_unicode_funcs(buf, hb_icu_get_unicode_funcs());
     hb_buffer_set_direction(buf, direction);
     hb_buffer_set_language(buf, g_hb_language);
     hb_buffer_add_utf8(buf, text, -1, 0, -1);
-
     hb_feature_t features[] = { { HB_TAG('k','e','r','n'), 1, 0, (unsigned int)-1 } };
     hb_shape(g_hb_font, buf, features, 1);
 
-    /* 4. Retrieve the glyph information and positions from HarfBuzz */
+    // Get glyph and position data.
     unsigned int glyph_count = 0;
     hb_glyph_info_t *glyph_info = hb_buffer_get_glyph_infos(buf, &glyph_count);
     hb_glyph_position_t *glyph_pos = hb_buffer_get_glyph_positions(buf, &glyph_count);
 
-    /* 5. Compute raw total glyph advance (A) and count visual clusters.
-       - We sum the x_advance values (converted from 26.6 fixed point) for all glyphs
-         to obtain the raw advance A.
-       - Consecutive glyphs with the same cluster form one visual unit.
-         The number of gaps between clusters is (num_clusters - 1).
-    */
-    double totalGlyphAdvance = 0.0;
-    int num_clusters = 0;
-    if (glyph_count > 0) {
-        totalGlyphAdvance = glyph_pos[0].x_advance / 64.0;
-        num_clusters = 1;
-        for (unsigned int i = 1; i < glyph_count; i++) {
-            totalGlyphAdvance += glyph_pos[i].x_advance / 64.0;
-            if ((int)glyph_info[i].cluster != (int)glyph_info[i - 1].cluster)
-                num_clusters++;
-        }
-    }
-
-    /* 6. Compute the total extra spacing to be added between clusters (E):
-         Each gap (there are num_clusters - 1) gets an extra spacing value.
-         This extra spacing is based on the current font size and a configurable factor.
-    */
-    double font_size = cairo_get_font_size(ct);
-    double extra_spacing = font_size * g_extra_char_spacing_factor;
-    double totalExtraSpacing = (num_clusters - 1) * extra_spacing;
-
-    /* 7. Compute the effective horizontal scaling factor.
-         Without adjustment, if you add extra spacing E to the scaled glyph advances,
-         the overall width would be:
-             finalWidth = (effective_scale * A) + E.
-         To preserve the original width (A) so that caret positioning remains unchanged,
-         we want:
-             (effective_scale * A) + E = A.
-         Thus, effective_scale = (A - E) / A.
-         (If A is zero or E is larger than A, we simply use a scale of 1.)
-    */
-    double computed_scale = 1.0;
-    if (totalGlyphAdvance > 0 && totalGlyphAdvance > totalExtraSpacing)
-        computed_scale = (totalGlyphAdvance - totalExtraSpacing) / totalGlyphAdvance;
-
-    /* 8. Allow overrides and constant adjustment.
-         The user can override the computed scale via the "GDIPLUS_HORIZONTAL_SCALE" environment variable.
-         Additionally, a constant multiplier from "GDIPLUS_HORIZONTAL_SCALE_MULTIPLIER" can fine-tune the output.
-    */
-    double effective_scale = computed_scale;
-    const char *scaleEnv = getenv("GDIPLUS_HORIZONTAL_SCALE");
-    if (scaleEnv && scaleEnv[0] != '\0') {
-        double env_scale = atof(scaleEnv);
-        if (env_scale > 0)
-            effective_scale = env_scale;
-    }
-
-    double multiplier = 1.0;
-    const char *multEnv = getenv("GDIPLUS_HORIZONTAL_SCALE_MULTIPLIER");
-    if (multEnv && multEnv[0] != '\0') {
-        double env_mult = atof(multEnv);
-        if (env_mult > 0)
-            multiplier = env_mult;
-    }
-    effective_scale *= multiplier;
-
-    /* 9. Apply the computed horizontal scale by adjusting the font matrix.
-         This "squishes" the text horizontally so that when we add extra spacing,
-         the overall width remains equal to the raw width A.
-    */
-    cairo_matrix_t scaledMatrix = originalMatrix;
-    scaledMatrix.xx *= effective_scale;
-    cairo_set_font_matrix(ct, &scaledMatrix);
-
-    /* 10. Build the Cairo glyph array.
-         For each glyph, the new x position is incremented by the scaled advance.
-         Extra spacing is added only when we cross from one cluster to the next.
-    */
-    cairo_glyph_t *cairo_glyphs = (cairo_glyph_t *)malloc(glyph_count * sizeof(cairo_glyph_t));
+    // Build and render the Cairo glyph array.
+    cairo_glyph_t *glyphs = malloc(glyph_count * sizeof(cairo_glyph_t));
     double x = startX, y = startY;
     for (unsigned int i = 0; i < glyph_count; i++) {
-        cairo_glyphs[i].index = glyph_info[i].codepoint;
-        cairo_glyphs[i].x = x + glyph_pos[i].x_offset / 64.0;
-        cairo_glyphs[i].y = y - glyph_pos[i].y_offset / 64.0;
-
-        double advance = glyph_pos[i].x_advance / 64.0;
-        x += effective_scale * advance;
-
-        /* Add the extra spacing only when a new visual cluster starts */
-        if (i + 1 < glyph_count) {
-            if ((int)glyph_info[i + 1].cluster != (int)glyph_info[i].cluster)
-                x += extra_spacing;
-        }
+        glyphs[i].index = glyph_info[i].codepoint;
+        glyphs[i].x = x + glyph_pos[i].x_offset / 64.0;
+        glyphs[i].y = y - glyph_pos[i].y_offset / 64.0;
+        x += glyph_pos[i].x_advance / 64.0;
     }
-    cairo_show_glyphs(ct, cairo_glyphs, glyph_count);
-    free(cairo_glyphs);
+    cairo_show_glyphs(ct, glyphs, glyph_count);
+    free(glyphs);
 
-    /* 11. Clean up: Destroy the HarfBuzz buffer and restore the original font matrix */
     hb_buffer_destroy(buf);
-    cairo_set_font_matrix(ct, &originalMatrix);
 }
 
 
