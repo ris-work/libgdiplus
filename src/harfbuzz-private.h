@@ -33,7 +33,7 @@ static int          g_text_shaping_initialized = 0;
 hb_language_t g_hb_language;
 /* In your header file, e.g., harfbuzz-private-2.h */
 //extern hb_script_t g_hb_script;
-hb_script_t g_hb_script = HB_SCRIPT_TAMIL;
+hb_script_t g_hb_script = HB_SCRIPT_LATIN;
 
 /**
  * gdiplus_get_font_path
@@ -198,12 +198,12 @@ static inline double cairo_get_font_size(cairo_t *cr)
  *     startY:     Starting coordinates for rendering.
  */
 static inline void RenderShapedText(cairo_t *ct, const char *text, hb_font_t *hb_font,
-                                    hb_direction_t direction, double startX, double startY)
+                                    hb_direction_t direction, double startX, double startY, double FontSize)
 {
     // Initialize text shaping and set the Cairo font face.
     init_text_shaping();
     cairo_set_font_face(ct, g_cairo_face);
-    cairo_set_font_size(ct, g_default_font_size);
+    cairo_set_font_size(ct, FontSize * g_default_font_size/12.0);
 
     // Create a HarfBuzz buffer and shape the text.
     hb_buffer_t *buf = hb_buffer_create();

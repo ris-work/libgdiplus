@@ -54,11 +54,14 @@ int cairo_MeasureString(
     const void            *format,
     RectF                 *boundingBox,
     int                   *codepointsFitted,
-    int                   *linesFilled)
+    int                   *linesFilled,
+    float		FontSize
+    )
 {
     /* 1. Initialize text shaping and set the Cairo font face. */
     init_text_shaping();
     cairo_set_font_face(graphics->ct, g_cairo_face);
+    cairo_set_font_size(graphics->ct, FontSize * g_default_font_size/12.0);
 
     cairo_matrix_t originalMatrix;
     cairo_get_font_matrix(graphics->ct, &originalMatrix);
@@ -129,7 +132,7 @@ int cairo_MeasureString(
     if (!format)
         GdipDeleteStringFormat(fmt);
 
-    cairo_set_font_matrix(graphics->ct, &originalMatrix);
+    //cairo_set_font_matrix(graphics->ct, &originalMatrix);
     return status;
 }
 
@@ -148,9 +151,10 @@ static inline int cairo_MeasureString(
 {
     init_text_shaping();
     cairo_set_font_face(graphics->ct, g_cairo_face);
+    cairo_set_font_size(graphics->ct, FontSize * g_default_font_size/12.0);
 
     cairo_matrix_t originalMatrix;
-    cairo_get_font_matrix(graphics->ct, &originalMatrix);
+    //cairo_get_font_matrix(graphics->ct, &originalMatrix);
 
     char *utf8Text = utf16_to_utf8(stringUnicode, length);
     if (!utf8Text)
@@ -212,7 +216,7 @@ static inline int cairo_MeasureString(
     if (!format)
         GdipDeleteStringFormat(fmt);
 
-    cairo_set_font_matrix(graphics->ct, &originalMatrix);
+    //cairo_set_font_matrix(graphics->ct, &originalMatrix);
     return status;
 }
 
