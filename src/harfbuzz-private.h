@@ -16,12 +16,14 @@ extern "C" {
 #include FT_FREETYPE_H
 
 #include <cairo.h>
+#include <cairo-ft.h>
 
 #include <harfbuzz/hb.h>
 #include <harfbuzz/hb-ft.h>
 #include <harfbuzz/hb-icu.h>
 
 /* Global state variables (static to this translation unit) */
+	cairo_font_face_t *g_cairo_face = NULL;
 static hb_font_t   *g_hb_font = NULL;
 static FT_Library   ft_library = NULL;
 static FT_Face      ft_face = NULL;
@@ -100,9 +102,22 @@ static inline void init_text_shaping(void)
         fprintf(stderr, "Error: Could not create HarfBuzz font\n");
         exit(EXIT_FAILURE);
     }
+    if (ft_face) {
+        // Create a Cairo font face from your loaded FT_Face (no fallback)
+        g_cairo_face = cairo_ft_font_face_create_for_ft_face(ft_face, 0);
+    }
     
     /* Retrieve extra character spacing factor from the environment */
     g_extra_char_spacing_factor = gdiplus_get_extra_char_spacing();
+    // Create a cairo font face from the FT_Face.
+// The second parameter is flags; usually 0 is fine.
+cairo_font_face_t *cairo_face = cairo_ft_font_face_create_for_ft_face(ft_face, 0);
+
+// Set the font face on your cairo context (cr)
+//cairo_set_font_face(cr, cairo_face);
+
+// Optionally also set the font size if needed:
+//cairo_set_font_size(cr, desired_font_size);
     
     g_text_shaping_initialized = 1;
     
@@ -174,6 +189,7 @@ static inline void RenderShapedText(cairo_t *ct, const char *text, hb_font_t *hb
        This call should be safe to call repeatedly.
     */
     init_text_shaping();
+    cairo_set_font_face(ct, g_cairo_face);
 
     /* 2. Save the current Cairo font matrix so that we can restore it later.
        We will modify the horizontal scaling factor here.

@@ -59,6 +59,7 @@ int cairo_MeasureString(
 {
     /* Initialize text shaping */
     init_text_shaping();
+    cairo_set_font_face(graphics->ct, g_cairo_face);
 
     cairo_matrix_t originalMatrix;
     cairo_get_font_matrix(graphics->ct, &originalMatrix);
@@ -192,6 +193,7 @@ static inline int cairo_MeasureString(
     int                   *linesFilled)
 {
     init_text_shaping();
+    cairo_set_font_face(graphics->ct, g_cairo_face);
 
     cairo_matrix_t originalMatrix;
     cairo_get_font_matrix(graphics->ct, &originalMatrix);
