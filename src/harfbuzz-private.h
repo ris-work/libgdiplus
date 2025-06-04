@@ -93,10 +93,6 @@ static inline void init_text_shaping(void)
     }
     
     /* Set a default pixel size (adjust 12 to your needs) */
-    if (FT_Set_Pixel_Sizes(ft_face, 0, 12)) {
-        fprintf(stderr, "Error: Could not set pixel size on the font face\n");
-        exit(EXIT_FAILURE);
-    }
     
     g_hb_font = hb_ft_font_create(ft_face, NULL);
     if (!g_hb_font) {
@@ -132,6 +128,7 @@ cairo_font_face_t *cairo_face = cairo_ft_font_face_create_for_ft_face(ft_face, 0
         fprintf(stderr, "Error: Could not set pixel size on the font face to %d\n", pixel_size);
         exit(EXIT_FAILURE);
     }
+    g_default_font_size = pixel_size;
 
     
     g_text_shaping_initialized = 1;
