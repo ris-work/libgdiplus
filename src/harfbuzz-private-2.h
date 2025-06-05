@@ -49,7 +49,7 @@ int cairo_MeasureString(
     GpGraphics            *graphics,
     const unsigned short  *stringUnicode,
     int                    length,
-    const void            *font,       /* Ignored in this implementation */
+    GDIPCONST GpFont            *font,       /* Ignored in this implementation */
     const RectF           *rc,         /* Ignored in this implementation */
     const void            *format,
     RectF                 *boundingBox,
@@ -58,10 +58,42 @@ int cairo_MeasureString(
 {
     /* 1. Initialize text shaping and set the Cairo font face. */
     init_text_shaping();
-    cairo_set_font_face(graphics->ct, g_cairo_face);
+    const char *font_path = gdiplus_get_font_path();
+    const char *env_font_size = getenv("GDIPLUS_FONT_SIZE");
+FT_Face      l_ft_face = NULL;
+	double l_default_font_size = 12.0;
+	//cairo_font_face_t *l_cairo_face = NULL;
+hb_font_t   *l_hb_font = NULL;
+    if (FT_New_Face(ft_library, font_path, 0, &l_ft_face)) {
+        fprintf(stderr, "Error: Could not load font face from %s\n", font_path);
+        exit(EXIT_FAILURE);
+    }
+    const char *l_env_font_size = getenv("GDIPLUS_FONT_SIZE");
+    int l_pixel_size = 12;  // Default value.
+    if (env_font_size && env_font_size[0] != '\0')
+    {
+        l_pixel_size = atoi(env_font_size);
+        if (l_pixel_size <= 0)
+            l_pixel_size = 12;
+    }
+    if (FT_Set_Pixel_Sizes(l_ft_face, 0, l_pixel_size)) {
+        fprintf(stderr, "Error: Could not set pixel size on the font face to %d\n", l_pixel_size);
+        exit(EXIT_FAILURE);
+    }
+    l_default_font_size = l_pixel_size;
+    l_hb_font = hb_ft_font_create(l_ft_face, NULL);
+    if (!l_hb_font) {
+        fprintf(stderr, "Error: Could not create HarfBuzz font\n");
+        exit(EXIT_FAILURE);
+    }
+	cairo_font_face_t *l_cairo_face = NULL;
+        l_cairo_face = cairo_ft_font_face_create_for_ft_face(l_ft_face, 0);
+    cairo_set_font_face(graphics->ct, l_cairo_face);
+    cairo_set_font_size(graphics->ct, font->sizeInPixels * l_default_font_size/12.0);
+    cairo_set_font_face(graphics->ct, l_cairo_face);
 
-    cairo_matrix_t originalMatrix;
-    cairo_get_font_matrix(graphics->ct, &originalMatrix);
+    //cairo_matrix_t originalMatrix;
+    //cairo_get_font_matrix(graphics->ct, &originalMatrix);
 
     /* 2. Convert the input UTF-16 string to UTF-8. */
     char *utf8Text = utf16_to_utf8(stringUnicode, length);
@@ -92,7 +124,7 @@ int cairo_MeasureString(
     hb_buffer_set_script(buf, g_hb_script);
     hb_buffer_add_utf8(buf, utf8Text, -1, 0, -1);
     hb_feature_t features[] = { { HB_TAG('k','e','r','n'), 1, 0, (unsigned int)-1 } };
-    hb_shape(g_hb_font, buf, features, 1);
+    hb_shape(l_hb_font, buf, features, 1);
 
     /* 4. Retrieve glyph information and compute the total advance width. */
     unsigned int glyph_count = 0;
@@ -107,8 +139,8 @@ int cairo_MeasureString(
 
     /* 5. Obtain Cairo font extents for height information. */
     cairo_font_extents_t fe;
-    cairo_scaled_font_t *scaled = cairo_get_scaled_font(graphics->ct);
-    cairo_scaled_font_extents(scaled, &fe);
+    //cairo_scaled_font_t *scaled = cairo_get_scaled_font(graphics->ct);
+    //cairo_scaled_font_extents(scaled, &fe);
 
     /* 6. Set the measured bounding box and codepoints/lines info. */
     if (boundingBox)
@@ -129,7 +161,7 @@ int cairo_MeasureString(
     if (!format)
         GdipDeleteStringFormat(fmt);
 
-    cairo_set_font_matrix(graphics->ct, &originalMatrix);
+    //cairo_set_font_matrix(graphics->ct, &originalMatrix);
     return status;
 }
 
@@ -139,7 +171,7 @@ static inline int cairo_MeasureString(
     GpGraphics            *graphics,
     const unsigned short  *stringUnicode,
     int                    length,
-    const void            *font,       /* Ignored in this implementation */
+    GDIPCONST GpFont            *font,       /* Ignored in this implementation */
     const RectF           *rc,         /* Ignored in this implementation */
     const void            *format,
     RectF                 *boundingBox,
@@ -147,6 +179,38 @@ static inline int cairo_MeasureString(
     int                   *linesFilled)
 {
     init_text_shaping();
+    const char *font_path = gdiplus_get_font_path();
+    const char *env_font_size = getenv("GDIPLUS_FONT_SIZE");
+FT_Face      l_ft_face = NULL;
+	double l_default_font_size = 12.0;
+	//cairo_font_face_t *l_cairo_face = NULL;
+hb_font_t   *l_hb_font = NULL;
+    if (FT_New_Face(ft_library, font_path, 0, &l_ft_face)) {
+        fprintf(stderr, "Error: Could not load font face from %s\n", font_path);
+        exit(EXIT_FAILURE);
+    }
+    const char *l_env_font_size = getenv("GDIPLUS_FONT_SIZE");
+    int l_pixel_size = 12;  // Default value.
+    if (env_font_size && env_font_size[0] != '\0')
+    {
+        l_pixel_size = atoi(env_font_size);
+        if (l_pixel_size <= 0)
+            l_pixel_size = 12;
+    }
+    if (FT_Set_Pixel_Sizes(l_ft_face, 0, l_pixel_size)) {
+        fprintf(stderr, "Error: Could not set pixel size on the font face to %d\n", l_pixel_size);
+        exit(EXIT_FAILURE);
+    }
+    l_default_font_size = l_pixel_size;
+    l_hb_font = hb_ft_font_create(l_ft_face, NULL);
+    if (!l_hb_font) {
+        fprintf(stderr, "Error: Could not create HarfBuzz font\n");
+        exit(EXIT_FAILURE);
+    }
+	cairo_font_face_t *l_cairo_face = NULL;
+        l_cairo_face = cairo_ft_font_face_create_for_ft_face(l_ft_face, 0);
+    cairo_set_font_face(graphics->ct, l_cairo_face);
+    cairo_set_font_size(graphics->ct, font->sizeInPixels * l_default_font_size/12.0);
     cairo_set_font_face(graphics->ct, g_cairo_face);
 
     cairo_matrix_t originalMatrix;

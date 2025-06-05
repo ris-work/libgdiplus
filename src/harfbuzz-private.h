@@ -33,7 +33,7 @@ static int          g_text_shaping_initialized = 0;
 hb_language_t g_hb_language;
 /* In your header file, e.g., harfbuzz-private-2.h */
 //extern hb_script_t g_hb_script;
-hb_script_t g_hb_script = HB_SCRIPT_TAMIL;
+hb_script_t g_hb_script = HB_SCRIPT_LATIN;
 
 /**
  * gdiplus_get_font_path
@@ -198,12 +198,42 @@ static inline double cairo_get_font_size(cairo_t *cr)
  *     startY:     Starting coordinates for rendering.
  */
 static inline void RenderShapedText(cairo_t *ct, const char *text, hb_font_t *hb_font,
-                                    hb_direction_t direction, double startX, double startY)
+                                    hb_direction_t direction, double startX, double startY, double FontSize)
 {
     // Initialize text shaping and set the Cairo font face.
     init_text_shaping();
-    cairo_set_font_face(ct, g_cairo_face);
-    cairo_set_font_size(ct, g_default_font_size);
+    const char *font_path = gdiplus_get_font_path();
+    const char *env_font_size = getenv("GDIPLUS_FONT_SIZE");
+FT_Face      l_ft_face = NULL;
+	double l_default_font_size = 12.0;
+	//cairo_font_face_t *l_cairo_face = NULL;
+hb_font_t   *l_hb_font = NULL;
+    if (FT_New_Face(ft_library, font_path, 0, &l_ft_face)) {
+        fprintf(stderr, "Error: Could not load font face from %s\n", font_path);
+        exit(EXIT_FAILURE);
+    }
+    const char *l_env_font_size = getenv("GDIPLUS_FONT_SIZE");
+    int l_pixel_size = 12;  // Default value.
+    if (env_font_size && env_font_size[0] != '\0')
+    {
+        l_pixel_size = atoi(env_font_size);
+        if (l_pixel_size <= 0)
+            l_pixel_size = 12;
+    }
+    if (FT_Set_Pixel_Sizes(l_ft_face, 0, l_pixel_size)) {
+        fprintf(stderr, "Error: Could not set pixel size on the font face to %d\n", l_pixel_size);
+        exit(EXIT_FAILURE);
+    }
+    l_default_font_size = l_pixel_size;
+    l_hb_font = hb_ft_font_create(l_ft_face, NULL);
+    if (!l_hb_font) {
+        fprintf(stderr, "Error: Could not create HarfBuzz font\n");
+        exit(EXIT_FAILURE);
+    }
+	cairo_font_face_t *l_cairo_face = NULL;
+        l_cairo_face = cairo_ft_font_face_create_for_ft_face(l_ft_face, 0);
+    cairo_set_font_face(ct, l_cairo_face);
+    cairo_set_font_size(ct, FontSize * g_default_font_size/12.0);
 
     // Create a HarfBuzz buffer and shape the text.
     hb_buffer_t *buf = hb_buffer_create();
@@ -214,7 +244,7 @@ static inline void RenderShapedText(cairo_t *ct, const char *text, hb_font_t *hb
 
     hb_buffer_add_utf8(buf, text, -1, 0, -1);
     hb_feature_t features[] = { { HB_TAG('k','e','r','n'), 1, 0, (unsigned int)-1 } };
-    hb_shape(g_hb_font, buf, features, 1);
+    hb_shape(l_hb_font, buf, features, 1);
 
     // Get glyph and position data.
     unsigned int glyph_count = 0;
@@ -234,6 +264,14 @@ static inline void RenderShapedText(cairo_t *ct, const char *text, hb_font_t *hb
     free(glyphs);
 
     hb_buffer_destroy(buf);
+    if (l_hb_font) {
+        hb_font_destroy(l_hb_font);
+        l_hb_font = NULL;
+    }
+    if (l_ft_face) {
+        FT_Done_Face(l_ft_face);
+        l_ft_face = NULL;
+    }
 }
 
 

@@ -950,7 +950,7 @@ for (i = 0; i < StringLen; i++) {
             gdip_cairo_move_to(graphics, CursorX, CursorY, FALSE, TRUE);
             /* Use HarfBuzz shaping in place of cairo_show_text */
             RenderShapedText(graphics->ct, (const char *)text_line, g_hb_font,
-                             HB_DIRECTION_LTR, CursorX, CursorY);
+                             HB_DIRECTION_LTR, CursorX, CursorY, font->sizeInPixels);
         } else {
             /* Vertical rendering: swap offsets and rotate the context */
             CursorY = rc->Y + StringDetails[i].PosX;
@@ -960,7 +960,7 @@ for (i = 0; i < StringLen; i++) {
             gdip_cairo_move_to(graphics, CursorX, CursorY, FALSE, TRUE);
             cairo_rotate(graphics->ct, PI / 2);
             RenderShapedText(graphics->ct, (const char *)text_line, g_hb_font,
-                             HB_DIRECTION_TTB, 0, 0);
+                             HB_DIRECTION_TTB, 0, 0, font->sizeInPixels);
             cairo_restore(graphics->ct);
         }
 #ifdef DRAWSTRING_DEBUG
