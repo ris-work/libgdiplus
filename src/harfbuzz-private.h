@@ -34,6 +34,40 @@ hb_language_t g_hb_language;
 /* In your header file, e.g., harfbuzz-private-2.h */
 //extern hb_script_t g_hb_script;
 hb_script_t g_hb_script = HB_SCRIPT_LATIN;
+static unsigned char *g_font_buffer = NULL;
+static size_t g_font_buffer_size = 0;
+
+
+// Helper function to load the entire font file into memory.
+unsigned char* load_font_file(const char* font_path, size_t* out_size) {
+    FILE *fp = fopen(font_path, "rb");
+    if (!fp) {
+        fprintf(stderr, "Error: Could not open font file %s\n", font_path);
+        exit(EXIT_FAILURE);
+    }
+    fseek(fp, 0, SEEK_END);
+    long size = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+    unsigned char *buffer = malloc(size);
+    if (!buffer) {
+        fprintf(stderr, "Error: Memory allocation failed\n");
+        fclose(fp);
+        exit(EXIT_FAILURE);
+    }
+
+    if (fread(buffer, 1, size, fp) != (size_t)size) {
+        fprintf(stderr, "Error: Could not read the full font file\n");
+        free(buffer);
+        fclose(fp);
+        exit(EXIT_FAILURE);
+    }
+    fclose(fp);
+
+    *out_size = (size_t)size;
+    return buffer;
+}
+
 
 /**
  * gdiplus_get_font_path
@@ -89,10 +123,18 @@ static inline void init_text_shaping(void)
         fprintf(stderr, "Error: Could not initialize FreeType library\n");
         exit(EXIT_FAILURE);
     }
+    g_font_buffer = load_font_file(font_path, &g_font_buffer_size);
     
-    if (FT_New_Face(ft_library, font_path, 0, &ft_face) != 0) {
-        fprintf(stderr, "Error: Could not load font face from %s\n", font_path);
+    if (FT_New_Memory_Face(ft_library, g_font_buffer, g_font_buffer_size, 0, &ft_face) != 0) {
+        fprintf(stderr, "Error: Could not load font face from %s\n @3", font_path);
         exit(EXIT_FAILURE);
+    }
+
+        // Create a font face from the memory buffer
+    if (FT_New_Memory_Face(ft_library, g_font_buffer, g_font_buffer_size, 0, &ft_face) != 0) {
+        fprintf(stderr, "Error: Could not create font face from memory\n");
+        free(g_font_buffer);
+        return -1;
     }
     
     /* Set a default pixel size (adjust 12 to your needs) */
@@ -208,8 +250,8 @@ FT_Face      l_ft_face = NULL;
 	double l_default_font_size = 12.0;
 	//cairo_font_face_t *l_cairo_face = NULL;
 hb_font_t   *l_hb_font = NULL;
-    if (FT_New_Face(ft_library, font_path, 0, &l_ft_face) != 0) {
-        fprintf(stderr, "Error: Could not load font face from %s\n", font_path);
+    if (FT_New_Memory_Face(ft_library, g_font_buffer, g_font_buffer_size, 0, &l_ft_face) != 0) {
+        fprintf(stderr, "Error: Could not load font face from %s\n @4", font_path);
         exit(EXIT_FAILURE);
     }
     const char *l_env_font_size = getenv("GDIPLUS_FONT_SIZE");

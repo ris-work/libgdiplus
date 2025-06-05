@@ -64,8 +64,8 @@ FT_Face      l_ft_face = NULL;
 	double l_default_font_size = 12.0;
 	//cairo_font_face_t *l_cairo_face = NULL;
 hb_font_t   *l_hb_font = NULL;
-    if (FT_New_Face(ft_library, font_path, 0, &l_ft_face) != 0) {
-        fprintf(stderr, "Error: Could not load font face from %s\n", font_path);
+    if (FT_New_Memory_Face(ft_library, g_font_buffer, g_font_buffer_size, 0, &l_ft_face) != 0) {
+        fprintf(stderr, "Error: Could not load font face from %s\n @2", font_path);
         exit(EXIT_FAILURE);
     }
     const char *l_env_font_size = getenv("GDIPLUS_FONT_SIZE");
@@ -161,6 +161,14 @@ hb_font_t   *l_hb_font = NULL;
     if (!format)
         GdipDeleteStringFormat(fmt);
 
+    if (l_hb_font) {
+        hb_font_destroy(l_hb_font);
+        l_hb_font = NULL;
+    }
+    if (l_ft_face) {
+        FT_Done_Face(l_ft_face);
+        l_ft_face = NULL;
+    }
     //cairo_set_font_matrix(graphics->ct, &originalMatrix);
     return status;
 }
@@ -185,8 +193,8 @@ FT_Face      l_ft_face = NULL;
 	double l_default_font_size = 12.0;
 	//cairo_font_face_t *l_cairo_face = NULL;
 hb_font_t   *l_hb_font = NULL;
-    if (FT_New_Face(ft_library, font_path, 0, &l_ft_face) != 0) {
-        fprintf(stderr, "Error: Could not load font face from %s\n", font_path);
+    if (FT_New_Memory_Face(ft_library, g_font_buffer, g_font_buffer_size, 0, &l_ft_face) != 0) {
+        fprintf(stderr, "Error: Could not load font face from %s\n @1", font_path);
         exit(EXIT_FAILURE);
     }
     const char *l_env_font_size = getenv("GDIPLUS_FONT_SIZE");
@@ -213,8 +221,8 @@ hb_font_t   *l_hb_font = NULL;
     cairo_set_font_size(graphics->ct, font->sizeInPixels * l_default_font_size/12.0);
     //cairo_set_font_face(graphics->ct, g_cairo_face);
 
-    cairo_matrix_t originalMatrix;
-    cairo_get_font_matrix(graphics->ct, &originalMatrix);
+    //cairo_matrix_t originalMatrix;
+    //cairo_get_font_matrix(graphics->ct, &originalMatrix);
 
     char *utf8Text = utf16_to_utf8(stringUnicode, length);
     if (!utf8Text)
@@ -276,7 +284,15 @@ hb_font_t   *l_hb_font = NULL;
     if (!format)
         GdipDeleteStringFormat(fmt);
 
-    cairo_set_font_matrix(graphics->ct, &originalMatrix);
+    //cairo_set_font_matrix(graphics->ct, &originalMatrix);
+    if (l_hb_font) {
+        hb_font_destroy(l_hb_font);
+        l_hb_font = NULL;
+    }
+    if (l_ft_face) {
+        FT_Done_Face(l_ft_face);
+        l_ft_face = NULL;
+    }
     return status;
 }
 
