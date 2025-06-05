@@ -10,6 +10,7 @@ This does not respect your font settings; use these instead:
 export GDIPLUS_FONT_PATH=
 export GDIPLUS_FONT_SIZE=
 ```
+`GDIPLUS_FONT_SIZE` scales the font instead by /12.0 (24 scales 2x, etc.).
 default for fonts is `NotoSans-Regular.ttf`, **should be present in the working directory**. Also: HarfBuzz script can be set at `g_hb_script` enum (`harfbuzz-private.h`). The default is set to Tamil. Or you can build it with Pango if you want (LGPL) but might as well use the LGPL'd `glib` then.
 
 ### Compiling
