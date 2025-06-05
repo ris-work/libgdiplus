@@ -64,7 +64,7 @@ FT_Face      l_ft_face = NULL;
 	double l_default_font_size = 12.0;
 	//cairo_font_face_t *l_cairo_face = NULL;
 hb_font_t   *l_hb_font = NULL;
-    if (FT_New_Face(ft_library, font_path, 0, &l_ft_face)) {
+    if (FT_New_Face(ft_library, font_path, 0, &l_ft_face) != 0) {
         fprintf(stderr, "Error: Could not load font face from %s\n", font_path);
         exit(EXIT_FAILURE);
     }
@@ -76,7 +76,7 @@ hb_font_t   *l_hb_font = NULL;
         if (l_pixel_size <= 0)
             l_pixel_size = 12;
     }
-    if (FT_Set_Pixel_Sizes(l_ft_face, 0, l_pixel_size)) {
+    if (FT_Set_Pixel_Sizes(l_ft_face, 0, l_pixel_size * font->sizeInPixels / 12.0)) {
         fprintf(stderr, "Error: Could not set pixel size on the font face to %d\n", l_pixel_size);
         exit(EXIT_FAILURE);
     }
@@ -90,7 +90,7 @@ hb_font_t   *l_hb_font = NULL;
         l_cairo_face = cairo_ft_font_face_create_for_ft_face(l_ft_face, 0);
     cairo_set_font_face(graphics->ct, l_cairo_face);
     cairo_set_font_size(graphics->ct, font->sizeInPixels * l_default_font_size/12.0);
-    cairo_set_font_face(graphics->ct, l_cairo_face);
+    //cairo_set_font_face(graphics->ct, l_cairo_face);
 
     //cairo_matrix_t originalMatrix;
     //cairo_get_font_matrix(graphics->ct, &originalMatrix);
@@ -185,7 +185,7 @@ FT_Face      l_ft_face = NULL;
 	double l_default_font_size = 12.0;
 	//cairo_font_face_t *l_cairo_face = NULL;
 hb_font_t   *l_hb_font = NULL;
-    if (FT_New_Face(ft_library, font_path, 0, &l_ft_face)) {
+    if (FT_New_Face(ft_library, font_path, 0, &l_ft_face) != 0) {
         fprintf(stderr, "Error: Could not load font face from %s\n", font_path);
         exit(EXIT_FAILURE);
     }
@@ -197,7 +197,7 @@ hb_font_t   *l_hb_font = NULL;
         if (l_pixel_size <= 0)
             l_pixel_size = 12;
     }
-    if (FT_Set_Pixel_Sizes(l_ft_face, 0, l_pixel_size)) {
+    if (FT_Set_Pixel_Sizes(l_ft_face, 0, l_pixel_size * font->sizeInPixels/12.0)) {
         fprintf(stderr, "Error: Could not set pixel size on the font face to %d\n", l_pixel_size);
         exit(EXIT_FAILURE);
     }
@@ -211,7 +211,7 @@ hb_font_t   *l_hb_font = NULL;
         l_cairo_face = cairo_ft_font_face_create_for_ft_face(l_ft_face, 0);
     cairo_set_font_face(graphics->ct, l_cairo_face);
     cairo_set_font_size(graphics->ct, font->sizeInPixels * l_default_font_size/12.0);
-    cairo_set_font_face(graphics->ct, g_cairo_face);
+    //cairo_set_font_face(graphics->ct, g_cairo_face);
 
     cairo_matrix_t originalMatrix;
     cairo_get_font_matrix(graphics->ct, &originalMatrix);

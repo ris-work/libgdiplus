@@ -90,7 +90,7 @@ static inline void init_text_shaping(void)
         exit(EXIT_FAILURE);
     }
     
-    if (FT_New_Face(ft_library, font_path, 0, &ft_face)) {
+    if (FT_New_Face(ft_library, font_path, 0, &ft_face) != 0) {
         fprintf(stderr, "Error: Could not load font face from %s\n", font_path);
         exit(EXIT_FAILURE);
     }
@@ -208,7 +208,7 @@ FT_Face      l_ft_face = NULL;
 	double l_default_font_size = 12.0;
 	//cairo_font_face_t *l_cairo_face = NULL;
 hb_font_t   *l_hb_font = NULL;
-    if (FT_New_Face(ft_library, font_path, 0, &l_ft_face)) {
+    if (FT_New_Face(ft_library, font_path, 0, &l_ft_face) != 0) {
         fprintf(stderr, "Error: Could not load font face from %s\n", font_path);
         exit(EXIT_FAILURE);
     }
@@ -220,7 +220,7 @@ hb_font_t   *l_hb_font = NULL;
         if (l_pixel_size <= 0)
             l_pixel_size = 12;
     }
-    if (FT_Set_Pixel_Sizes(l_ft_face, 0, l_pixel_size)) {
+    if (FT_Set_Pixel_Sizes(l_ft_face, 0, l_pixel_size * FontSize/12.0)) {
         fprintf(stderr, "Error: Could not set pixel size on the font face to %d\n", l_pixel_size);
         exit(EXIT_FAILURE);
     }
