@@ -29,6 +29,8 @@ CXXFLAGS=-O3 -flto -Ofast -funroll-loops -finline-functions -ffast-math -fomit-f
 LDFLAGS=-lharfbuzz-icu -lharfbuzz -flto -fuse-ld=lld-19 -Wl,--gc-sections -Wl,--icf=all -Wl,--lto-O3 -Wl,--strip-all
 CC=clang-19 -fuse-ld=lld-19 -Wno-error=int-conversion -Wno-error=implicit-function-declaration -Wno-error=return-mismatch
 CFLAGS=-O3 -flto -Ofast -funroll-loops -finline-functions -ffast-math -fomit-frame-pointer
+./configure
+make && make install
 ```
 
 ### License
