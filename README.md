@@ -12,6 +12,23 @@ export GDIPLUS_FONT_SIZE=
 ```
 default for fonts is `NotoSans-Regular.ttf`, **should be present in the working directory**. Also: HarfBuzz script can be set at `g_hb_script` enum (`harfbuzz-private.h`). The default is set to Tamil. Or you can build it with Pango if you want (LGPL) but might as well use the LGPL'd `glib` then.
 
+### Compiling
+##### With careless optimizations
+Debian:
+```
+apt install lld-19 llvm-19 clang-19
+```
+```
+PKG_CONFIG_PATH=/root/eglib:/root/libgdiplus:/root/libgdiplus:
+LD=ld.lld-19
+AR=llvm-ar-19
+RANLIB=llvm-ranlib-19
+CXX=clang++-19 -fuse-ld=lld-19
+CXXFLAGS=-O3 -flto -Ofast -funroll-loops -finline-functions -ffast-math -fomit-frame-pointer
+LDFLAGS=-lharfbuzz-icu -lharfbuzz -flto -fuse-ld=lld-19 -Wl,--gc-sections -Wl,--icf=all -Wl,--lto-O3 -Wl,--strip-all
+CC=clang-19 -fuse-ld=lld-19 -Wno-error=int-conversion -Wno-error=implicit-function-declaration -Wno-error=return-mismatch
+CFLAGS=-O3 -flto -Ofast -funroll-loops -finline-functions -ffast-math -fomit-frame-pointer
+```
 
 ### License
 Copyright (c) 2025 Rishikeshan Sulochana/Lavakumar, my contributions are under MIT/X11 license and so is this repository unless otherwise noted in other files.
