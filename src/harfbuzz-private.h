@@ -27,7 +27,7 @@ extern "C" {
 	cairo_font_face_t *g_cairo_face = NULL;
 static hb_font_t   *g_hb_font = NULL;
 static FT_Library   ft_library = NULL;
-static FT_Face      ft_face = NULL;
+static FT_Face      g_ft_face = NULL;
 static double       g_extra_char_spacing_factor = 0.15;
 static int          g_text_shaping_initialized = 0;
 hb_language_t g_hb_language;
@@ -125,13 +125,13 @@ static inline void init_text_shaping(void)
     }
     g_font_buffer = load_font_file(font_path, &g_font_buffer_size);
     
-    if (FT_New_Memory_Face(ft_library, g_font_buffer, g_font_buffer_size, 0, &ft_face) != 0) {
+    if (FT_New_Memory_Face(ft_library, g_font_buffer, g_font_buffer_size, 0, &g_ft_face) != 0) {
         fprintf(stderr, "Error: Could not load font face from %s\n @3", font_path);
         exit(EXIT_FAILURE);
     }
 
         // Create a font face from the memory buffer
-    if (FT_New_Memory_Face(ft_library, g_font_buffer, g_font_buffer_size, 0, &ft_face) != 0) {
+    if (FT_New_Memory_Face(ft_library, g_font_buffer, g_font_buffer_size, 0, &g_ft_face) != 0) {
         fprintf(stderr, "Error: Could not create font face from memory\n");
         free(g_font_buffer);
         return -1;
@@ -139,21 +139,21 @@ static inline void init_text_shaping(void)
     
     /* Set a default pixel size (adjust 12 to your needs) */
     
-    g_hb_font = hb_ft_font_create(ft_face, NULL);
+    g_hb_font = hb_ft_font_create(g_ft_face, NULL);
     if (!g_hb_font) {
         fprintf(stderr, "Error: Could not create HarfBuzz font\n");
         exit(EXIT_FAILURE);
     }
-    if (ft_face) {
+    if (g_ft_face) {
         // Create a Cairo font face from your loaded FT_Face (no fallback)
-        g_cairo_face = cairo_ft_font_face_create_for_ft_face(ft_face, 0);
+        g_cairo_face = cairo_ft_font_face_create_for_ft_face(g_ft_face, 0);
     }
     
     /* Retrieve extra character spacing factor from the environment */
     g_extra_char_spacing_factor = gdiplus_get_extra_char_spacing();
     // Create a cairo font face from the FT_Face.
 // The second parameter is flags; usually 0 is fine.
-cairo_font_face_t *cairo_face = cairo_ft_font_face_create_for_ft_face(ft_face, 0);
+cairo_font_face_t *cairo_face = cairo_ft_font_face_create_for_ft_face(g_ft_face, 0);
 
 // Set the font face on your cairo context (cr)
 //cairo_set_font_face(cr, cairo_face);
@@ -169,7 +169,7 @@ cairo_font_face_t *cairo_face = cairo_ft_font_face_create_for_ft_face(ft_face, 0
         if (pixel_size <= 0)
             pixel_size = 12;
     }
-    if (FT_Set_Pixel_Sizes(ft_face, 0, pixel_size)) {
+    if (FT_Set_Pixel_Sizes(g_ft_face, 0, pixel_size)) {
         fprintf(stderr, "Error: Could not set pixel size on the font face to %d\n", pixel_size);
         exit(EXIT_FAILURE);
     }
@@ -196,9 +196,9 @@ static inline void cleanup_text_shaping(void)
         hb_font_destroy(g_hb_font);
         g_hb_font = NULL;
     }
-    if (ft_face) {
-        FT_Done_Face(ft_face);
-        ft_face = NULL;
+    if (g_ft_face) {
+        FT_Done_Face(g_ft_face);
+        g_ft_face = NULL;
     }
     if (ft_library) {
         FT_Done_FreeType(ft_library);
@@ -250,10 +250,10 @@ FT_Face      l_ft_face = NULL;
 	double l_default_font_size = 12.0;
 	//cairo_font_face_t *l_cairo_face = NULL;
 hb_font_t   *l_hb_font = NULL;
-    if (FT_New_Memory_Face(ft_library, g_font_buffer, g_font_buffer_size, 0, &l_ft_face) != 0) {
+    /*if (FT_New_Memory_Face(ft_library, g_font_buffer, g_font_buffer_size, 0, &l_ft_face) != 0) {
         fprintf(stderr, "Error: Could not load font face from %s\n @4", font_path);
         exit(EXIT_FAILURE);
-    }
+    }*/
     const char *l_env_font_size = getenv("GDIPLUS_FONT_SIZE");
     int l_pixel_size = 12;  // Default value.
     if (env_font_size && env_font_size[0] != '\0')
@@ -262,18 +262,18 @@ hb_font_t   *l_hb_font = NULL;
         if (l_pixel_size <= 0)
             l_pixel_size = 12;
     }
-    if (FT_Set_Pixel_Sizes(l_ft_face, 0, l_pixel_size * FontSize/12.0)) {
+    if (FT_Set_Pixel_Sizes(g_ft_face, 0, l_pixel_size * FontSize/12.0)) {
         fprintf(stderr, "Error: Could not set pixel size on the font face to %d\n", l_pixel_size);
         exit(EXIT_FAILURE);
     }
     l_default_font_size = l_pixel_size;
-    l_hb_font = hb_ft_font_create(l_ft_face, NULL);
+    l_hb_font = hb_ft_font_create(g_ft_face, NULL);
     if (!l_hb_font) {
         fprintf(stderr, "Error: Could not create HarfBuzz font\n");
         exit(EXIT_FAILURE);
     }
 	cairo_font_face_t *l_cairo_face = NULL;
-        l_cairo_face = cairo_ft_font_face_create_for_ft_face(l_ft_face, 0);
+        l_cairo_face = cairo_ft_font_face_create_for_ft_face(g_ft_face, 0);
     cairo_set_font_face(ct, l_cairo_face);
     cairo_set_font_size(ct, FontSize * g_default_font_size/12.0);
 
@@ -306,14 +306,16 @@ hb_font_t   *l_hb_font = NULL;
     free(glyphs);
 
     hb_buffer_destroy(buf);
+    
     if (l_hb_font) {
         hb_font_destroy(l_hb_font);
         l_hb_font = NULL;
     }
+    /*
     if (l_ft_face) {
         FT_Done_Face(l_ft_face);
         l_ft_face = NULL;
-    }
+    }*/
 }
 
 

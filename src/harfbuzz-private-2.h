@@ -64,10 +64,10 @@ FT_Face      l_ft_face = NULL;
 	double l_default_font_size = 12.0;
 	//cairo_font_face_t *l_cairo_face = NULL;
 hb_font_t   *l_hb_font = NULL;
-    if (FT_New_Memory_Face(ft_library, g_font_buffer, g_font_buffer_size, 0, &l_ft_face) != 0) {
+    /*if (FT_New_Memory_Face(ft_library, g_font_buffer, g_font_buffer_size, 0, &l_ft_face) != 0) {
         fprintf(stderr, "Error: Could not load font face from %s\n @2", font_path);
         exit(EXIT_FAILURE);
-    }
+    }*/
     const char *l_env_font_size = getenv("GDIPLUS_FONT_SIZE");
     int l_pixel_size = 12;  // Default value.
     if (env_font_size && env_font_size[0] != '\0')
@@ -76,18 +76,18 @@ hb_font_t   *l_hb_font = NULL;
         if (l_pixel_size <= 0)
             l_pixel_size = 12;
     }
-    if (FT_Set_Pixel_Sizes(l_ft_face, 0, l_pixel_size * font->sizeInPixels / 12.0)) {
+    if (FT_Set_Pixel_Sizes(g_ft_face, 0, l_pixel_size * font->sizeInPixels / 12.0)) {
         fprintf(stderr, "Error: Could not set pixel size on the font face to %d\n", l_pixel_size);
         exit(EXIT_FAILURE);
     }
     l_default_font_size = l_pixel_size;
-    l_hb_font = hb_ft_font_create(l_ft_face, NULL);
+    l_hb_font = hb_ft_font_create(g_ft_face, NULL);
     if (!l_hb_font) {
         fprintf(stderr, "Error: Could not create HarfBuzz font\n");
         exit(EXIT_FAILURE);
     }
 	cairo_font_face_t *l_cairo_face = NULL;
-        l_cairo_face = cairo_ft_font_face_create_for_ft_face(l_ft_face, 0);
+        l_cairo_face = cairo_ft_font_face_create_for_ft_face(g_ft_face, 0);
     cairo_set_font_face(graphics->ct, l_cairo_face);
     cairo_set_font_size(graphics->ct, font->sizeInPixels * l_default_font_size/12.0);
     //cairo_set_font_face(graphics->ct, l_cairo_face);
@@ -165,10 +165,10 @@ hb_font_t   *l_hb_font = NULL;
         hb_font_destroy(l_hb_font);
         l_hb_font = NULL;
     }
-    if (l_ft_face) {
+    /*if (l_ft_face) {
         FT_Done_Face(l_ft_face);
         l_ft_face = NULL;
-    }
+    }*/
     //cairo_set_font_matrix(graphics->ct, &originalMatrix);
     return status;
 }
@@ -193,10 +193,10 @@ FT_Face      l_ft_face = NULL;
 	double l_default_font_size = 12.0;
 	//cairo_font_face_t *l_cairo_face = NULL;
 hb_font_t   *l_hb_font = NULL;
-    if (FT_New_Memory_Face(ft_library, g_font_buffer, g_font_buffer_size, 0, &l_ft_face) != 0) {
+    /*if (FT_New_Memory_Face(ft_library, g_font_buffer, g_font_buffer_size, 0, &l_ft_face) != 0) {
         fprintf(stderr, "Error: Could not load font face from %s\n @1", font_path);
         exit(EXIT_FAILURE);
-    }
+    }*/
     const char *l_env_font_size = getenv("GDIPLUS_FONT_SIZE");
     int l_pixel_size = 12;  // Default value.
     if (env_font_size && env_font_size[0] != '\0')
@@ -205,18 +205,18 @@ hb_font_t   *l_hb_font = NULL;
         if (l_pixel_size <= 0)
             l_pixel_size = 12;
     }
-    if (FT_Set_Pixel_Sizes(l_ft_face, 0, l_pixel_size * font->sizeInPixels/12.0)) {
+    if (FT_Set_Pixel_Sizes(g_ft_face, 0, l_pixel_size * font->sizeInPixels/12.0)) {
         fprintf(stderr, "Error: Could not set pixel size on the font face to %d\n", l_pixel_size);
         exit(EXIT_FAILURE);
     }
     l_default_font_size = l_pixel_size;
-    l_hb_font = hb_ft_font_create(l_ft_face, NULL);
+    l_hb_font = hb_ft_font_create(g_ft_face, NULL);
     if (!l_hb_font) {
         fprintf(stderr, "Error: Could not create HarfBuzz font\n");
         exit(EXIT_FAILURE);
     }
 	cairo_font_face_t *l_cairo_face = NULL;
-        l_cairo_face = cairo_ft_font_face_create_for_ft_face(l_ft_face, 0);
+        l_cairo_face = cairo_ft_font_face_create_for_ft_face(g_ft_face, 0);
     cairo_set_font_face(graphics->ct, l_cairo_face);
     cairo_set_font_size(graphics->ct, font->sizeInPixels * l_default_font_size/12.0);
     //cairo_set_font_face(graphics->ct, g_cairo_face);
@@ -289,10 +289,10 @@ hb_font_t   *l_hb_font = NULL;
         hb_font_destroy(l_hb_font);
         l_hb_font = NULL;
     }
-    if (l_ft_face) {
+    /*if (l_ft_face) {
         FT_Done_Face(l_ft_face);
         l_ft_face = NULL;
-    }
+    }*/
     return status;
 }
 
