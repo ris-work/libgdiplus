@@ -23,6 +23,8 @@ extern "C" {
 #include <harfbuzz/hb-icu.h>
 
 /* Global state variables (static to this translation unit) */
+	static double g_last_effective_size = 0.0;
+static hb_font_t *g_cached_hb_font = NULL;
 	static double g_default_font_size = 12.0;
 	cairo_font_face_t *g_cairo_face = NULL;
 static hb_font_t   *g_hb_font = NULL;
@@ -36,6 +38,62 @@ hb_language_t g_hb_language;
 hb_script_t g_hb_script = HB_SCRIPT_LATIN;
 static unsigned char *g_font_buffer = NULL;
 static size_t g_font_buffer_size = 0;
+
+static inline hb_font_t *use_cached_if_same_size_or_create_new(double effective_size)
+{
+    if (fabs(effective_size - g_last_effective_size) > 0.001) {
+	    fprintf(stderr,
+    "----- Debug Globals -----\n"
+    "g_ft_face                = %p\n"
+    "ft_library               = %p\n"
+    "g_last_effective_size    = %.3f\n"
+    "effective_size           = %.3f\n"
+    "g_default_font_size      = %.3f\n"
+    "g_cached_hb_font         = %p\n"
+    "g_cairo_face             = %p\n"
+    "g_hb_font                = %p\n"
+    "g_extra_char_spacing     = %.4f\n"
+    "g_text_shaping_init      = %d\n"
+    "g_hb_language            = %s\n"
+    "g_hb_script              = 0x%.8x\n"
+    "g_font_buffer            = %p\n"
+    "g_font_buffer_size       = %zu\n"
+    "-------------------------\n",
+    (void*)g_ft_face,
+    (void*)ft_library,
+    g_last_effective_size,
+    effective_size,
+    g_default_font_size,
+    g_cached_hb_font,
+    g_cairo_face,
+    g_hb_font,
+    g_extra_char_spacing_factor,
+    g_text_shaping_initialized,
+    hb_language_to_string(g_hb_language),
+    (unsigned)g_hb_script,
+    g_font_buffer,
+    g_font_buffer_size
+);
+
+
+        if (g_cached_hb_font)
+            hb_font_destroy(g_cached_hb_font);
+
+        if (FT_Set_Pixel_Sizes(g_ft_face, 0, effective_size)) {
+            fprintf(stderr, "Error: Could not set pixel size to %.2f\n", effective_size);
+            exit(EXIT_FAILURE);
+        }
+
+        g_cached_hb_font = hb_ft_font_create(g_ft_face, NULL);
+        if (!g_cached_hb_font) {
+            fprintf(stderr, "Error: Could not create HarfBuzz font\n");
+            exit(EXIT_FAILURE);
+        }
+        g_last_effective_size = effective_size;
+    }
+    return g_cached_hb_font;
+}
+
 
 
 // Helper function to load the entire font file into memory.
@@ -262,16 +320,20 @@ hb_font_t   *l_hb_font = NULL;
         if (l_pixel_size <= 0)
             l_pixel_size = 12;
     }
-    if (FT_Set_Pixel_Sizes(g_ft_face, 0, l_pixel_size * FontSize/12.0)) {
+    /*if (FT_Set_Pixel_Sizes(g_ft_face, 0, l_pixel_size * FontSize/12.0)) {
         fprintf(stderr, "Error: Could not set pixel size on the font face to %d\n", l_pixel_size);
         exit(EXIT_FAILURE);
     }
     l_default_font_size = l_pixel_size;
-    l_hb_font = hb_ft_font_create(g_ft_face, NULL);
-    if (!l_hb_font) {
+    l_hb_font = hb_ft_font_create(g_ft_face, NULL);*/
+    //l_hb_font = hb_ft_font_create(g_ft_face, NULL);
+    double effective_size = l_pixel_size * FontSize / 12.0;
+l_hb_font = use_cached_if_same_size_or_create_new(effective_size);
+
+    /*if (!l_hb_font) {
         fprintf(stderr, "Error: Could not create HarfBuzz font\n");
         exit(EXIT_FAILURE);
-    }
+    }*/
 	cairo_font_face_t *l_cairo_face = NULL;
         l_cairo_face = cairo_ft_font_face_create_for_ft_face(g_ft_face, 0);
     cairo_set_font_face(ct, l_cairo_face);
