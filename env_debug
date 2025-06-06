@@ -1,0 +1,11 @@
+#!/bin/bash
+export PKG_CONFIG_PATH="/root/eglib:/root/libgdiplus:/root/libgdiplus:" \
+LD=ld.lld-19 \
+AR=llvm-ar-19 \
+RANLIB=llvm-ranlib-19 \
+CXX="clang++-19 -fuse-ld=lld-19" \
+CXXFLAGS="-O3 -flto -Ofast -funroll-loops -finline-functions -ffast-math -fomit-frame-pointer -g" \
+LDFLAGS="-lharfbuzz-icu -lharfbuzz -flto -fuse-ld=lld-19 -Wl,--gc-sections -Wl,--icf=all -Wl,--lto-O3 -Wl,--strip-all" \
+CC="clang-19 -fuse-ld=lld-19 -Wno-error=int-conversion -Wno-error=implicit-function-declaration -Wno-error=return-mismatch" \
+CFLAGS="-O1 -flto -funroll-loops -g"
+bash
