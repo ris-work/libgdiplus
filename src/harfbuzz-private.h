@@ -21,6 +21,7 @@ extern "C" {
 #include <harfbuzz/hb.h>
 #include <harfbuzz/hb-ft.h>
 #include <harfbuzz/hb-icu.h>
+#include "harfbuzz-private-lang.h"
 
 /* Global state variables (static to this translation unit) */
 	static double g_default_font_size = 12.0;
@@ -30,10 +31,10 @@ static FT_Library   ft_library = NULL;
 static FT_Face      g_ft_face = NULL;
 static double       g_extra_char_spacing_factor = 0.15;
 static int          g_text_shaping_initialized = 0;
-hb_language_t g_hb_language;
+//hb_language_t g_hb_language;
 /* In your header file, e.g., harfbuzz-private-2.h */
 //extern hb_script_t g_hb_script;
-hb_script_t g_hb_script = HB_SCRIPT_LATIN;
+//hb_script_t g_hb_script = HB_SCRIPT_TAMIL;
 static unsigned char *g_font_buffer = NULL;
 static size_t g_font_buffer_size = 0;
 
@@ -244,6 +245,7 @@ static inline void RenderShapedText(cairo_t *ct, const char *text, hb_font_t *hb
 {
     // Initialize text shaping and set the Cairo font face.
     init_text_shaping();
+    init_hb_languages();
     const char *font_path = gdiplus_get_font_path();
     const char *env_font_size = getenv("GDIPLUS_FONT_SIZE");
 FT_Face      l_ft_face = NULL;

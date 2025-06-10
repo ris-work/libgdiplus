@@ -76,6 +76,7 @@ hb_font_t   *l_hb_font = NULL;
         if (l_pixel_size <= 0)
             l_pixel_size = 12;
     }
+    fprintf(stderr, "Attempt: set font size: %d\n", l_pixel_size*font->sizeInPixels/12.0);
     if (FT_Set_Pixel_Sizes(g_ft_face, 0, l_pixel_size * font->sizeInPixels / 12.0)) {
         fprintf(stderr, "Error: Could not set pixel size on the font face to %d\n", l_pixel_size);
         exit(EXIT_FAILURE);
@@ -205,6 +206,7 @@ hb_font_t   *l_hb_font = NULL;
         if (l_pixel_size <= 0)
             l_pixel_size = 12;
     }
+    fprintf(stderr, "Attempt: set font size: %d\n", l_pixel_size*font->sizeInPixels/12.0);
     if (FT_Set_Pixel_Sizes(g_ft_face, 0, l_pixel_size * font->sizeInPixels/12.0)) {
         fprintf(stderr, "Error: Could not set pixel size on the font face to %d\n", l_pixel_size);
         exit(EXIT_FAILURE);
