@@ -58,6 +58,7 @@ int cairo_MeasureString(
 {
     /* 1. Initialize text shaping and set the Cairo font face. */
     init_text_shaping();
+    float desiredSize=0.0;
     const char *font_path = gdiplus_get_font_path();
     const char *env_font_size = getenv("GDIPLUS_FONT_SIZE");
 FT_Face      l_ft_face = NULL;
@@ -76,8 +77,10 @@ hb_font_t   *l_hb_font = NULL;
         if (l_pixel_size <= 0)
             l_pixel_size = 12;
     }
-    fprintf(stderr, "Attempt: set font size: %d\n", l_pixel_size*font->sizeInPixels/12.0);
-    if (FT_Set_Pixel_Sizes(g_ft_face, 0, l_pixel_size * font->sizeInPixels / 12.0)) {
+    float sizeInPoints = gdip_unit_conversion (font->unit, UnitPoint, gdip_get_display_dpi(), gtMemoryBitmap, font->emSize);
+    desiredSize = l_pixel_size * sizeInPoints * (18.666/14) /12.0;
+    fprintf(stderr, "Attempt: set font size: %d, em: %f\n", desiredSize);
+    if (FT_Set_Pixel_Sizes(g_ft_face, 0, desiredSize)) {
         fprintf(stderr, "Error: Could not set pixel size on the font face to %d\n", l_pixel_size);
         exit(EXIT_FAILURE);
     }
@@ -90,7 +93,7 @@ hb_font_t   *l_hb_font = NULL;
 	cairo_font_face_t *l_cairo_face = NULL;
         l_cairo_face = cairo_ft_font_face_create_for_ft_face(g_ft_face, 0);
     cairo_set_font_face(graphics->ct, l_cairo_face);
-    cairo_set_font_size(graphics->ct, font->sizeInPixels * l_default_font_size/12.0);
+    cairo_set_font_size(graphics->ct, desiredSize);
     //cairo_set_font_face(graphics->ct, l_cairo_face);
 
     //cairo_matrix_t originalMatrix;
@@ -140,8 +143,8 @@ hb_font_t   *l_hb_font = NULL;
 
     /* 5. Obtain Cairo font extents for height information. */
     cairo_font_extents_t fe;
-    //cairo_scaled_font_t *scaled = cairo_get_scaled_font(graphics->ct);
-    //cairo_scaled_font_extents(scaled, &fe);
+    cairo_scaled_font_t *scaled = cairo_get_scaled_font(graphics->ct);
+    cairo_scaled_font_extents(scaled, &fe);
 
     /* 6. Set the measured bounding box and codepoints/lines info. */
     if (boundingBox)
@@ -188,6 +191,7 @@ static inline int cairo_MeasureString(
     int                   *linesFilled)
 {
     init_text_shaping();
+    float desiredSize=0.0;
     const char *font_path = gdiplus_get_font_path();
     const char *env_font_size = getenv("GDIPLUS_FONT_SIZE");
 FT_Face      l_ft_face = NULL;
@@ -206,8 +210,11 @@ hb_font_t   *l_hb_font = NULL;
         if (l_pixel_size <= 0)
             l_pixel_size = 12;
     }
-    fprintf(stderr, "Attempt: set font size: %d\n", l_pixel_size*font->sizeInPixels/12.0);
-    if (FT_Set_Pixel_Sizes(g_ft_face, 0, l_pixel_size * font->sizeInPixels/12.0)) {
+    float sizeInPoints = gdip_unit_conversion (font->unit, UnitPoint, gdip_get_display_dpi(), gtMemoryBitmap, font->emSize);
+    desiredSize = l_pixel_size * sizeInPoints * (18.666 / 14) /12.0;
+    //desiredSize = l_pixel_size * font->emSize /12.0;
+    fprintf(stderr, "Attempt: set font size: %d, em: %f\n", desiredSize);
+    if (FT_Set_Pixel_Sizes(g_ft_face, 0, desiredSize)) {
         fprintf(stderr, "Error: Could not set pixel size on the font face to %d\n", l_pixel_size);
         exit(EXIT_FAILURE);
     }
@@ -220,7 +227,7 @@ hb_font_t   *l_hb_font = NULL;
 	cairo_font_face_t *l_cairo_face = NULL;
         l_cairo_face = cairo_ft_font_face_create_for_ft_face(g_ft_face, 0);
     cairo_set_font_face(graphics->ct, l_cairo_face);
-    cairo_set_font_size(graphics->ct, font->sizeInPixels * l_default_font_size/12.0);
+    cairo_set_font_size(graphics->ct, desiredSize);
     //cairo_set_font_face(graphics->ct, g_cairo_face);
 
     //cairo_matrix_t originalMatrix;

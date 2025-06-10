@@ -170,6 +170,7 @@ cairo_font_face_t *cairo_face = cairo_ft_font_face_create_for_ft_face(g_ft_face,
         if (pixel_size <= 0)
             pixel_size = 12;
     }
+    float desiredSize = pixel_size;
     if (FT_Set_Pixel_Sizes(g_ft_face, 0, pixel_size)) {
         fprintf(stderr, "Error: Could not set pixel size on the font face to %d\n", pixel_size);
         exit(EXIT_FAILURE);
@@ -264,7 +265,9 @@ hb_font_t   *l_hb_font = NULL;
         if (l_pixel_size <= 0)
             l_pixel_size = 12;
     }
-    if (FT_Set_Pixel_Sizes(g_ft_face, 0, l_pixel_size * FontSize/12.0)) {
+    float desiredSize = l_pixel_size * FontSize/12.0;
+        fprintf(stderr, "TextRenderer: attempt to set to %f\n", desiredSize);
+    if (FT_Set_Pixel_Sizes(g_ft_face, 0, desiredSize)) {
         fprintf(stderr, "Error: Could not set pixel size on the font face to %d\n", l_pixel_size);
         exit(EXIT_FAILURE);
     }
@@ -277,7 +280,7 @@ hb_font_t   *l_hb_font = NULL;
 	cairo_font_face_t *l_cairo_face = NULL;
         l_cairo_face = cairo_ft_font_face_create_for_ft_face(g_ft_face, 0);
     cairo_set_font_face(ct, l_cairo_face);
-    cairo_set_font_size(ct, FontSize * g_default_font_size/12.0);
+    cairo_set_font_size(ct, desiredSize);
 
     // Create a HarfBuzz buffer and shape the text.
     hb_buffer_t *buf = hb_buffer_create();
