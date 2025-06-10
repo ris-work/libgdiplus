@@ -266,7 +266,9 @@ hb_font_t   *l_hb_font = NULL;
             l_pixel_size = 12;
     }
     float desiredSize = l_pixel_size * FontSize/12.0;
+#if dbgHbCrFt
         fprintf(stderr, "TextRenderer: attempt to set to %f\n", desiredSize);
+#endif
     if (FT_Set_Pixel_Sizes(g_ft_face, 0, desiredSize)) {
         fprintf(stderr, "Error: Could not set pixel size on the font face to %d\n", l_pixel_size);
         exit(EXIT_FAILURE);

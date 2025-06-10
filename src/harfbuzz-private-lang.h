@@ -7,6 +7,9 @@
 #define strcasecmp _stricmp
 #endif
 
+#define GDIP_DEBUG_HARFBUZZ_CAIRO_FREETYPE 0
+#define dbgHbCrFt GDIP_DEBUG_HARFBUZZ_CAIRO_FREETYPE
+
 // Define the enumerator for supported languages.
 typedef enum {
     LANG_UNKNOWN,

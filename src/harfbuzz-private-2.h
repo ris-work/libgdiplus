@@ -79,7 +79,9 @@ hb_font_t   *l_hb_font = NULL;
     }
     float sizeInPoints = gdip_unit_conversion (font->unit, UnitPoint, gdip_get_display_dpi(), gtMemoryBitmap, font->emSize);
     desiredSize = l_pixel_size * sizeInPoints * (18.666/14) /12.0;
+#if dbgHbCrFt
     fprintf(stderr, "Attempt: set font size: %d, em: %f\n", desiredSize);
+#endif
     if (FT_Set_Pixel_Sizes(g_ft_face, 0, desiredSize)) {
         fprintf(stderr, "Error: Could not set pixel size on the font face to %d\n", l_pixel_size);
         exit(EXIT_FAILURE);
@@ -213,7 +215,9 @@ hb_font_t   *l_hb_font = NULL;
     float sizeInPoints = gdip_unit_conversion (font->unit, UnitPoint, gdip_get_display_dpi(), gtMemoryBitmap, font->emSize);
     desiredSize = l_pixel_size * sizeInPoints * (18.666 / 14) /12.0;
     //desiredSize = l_pixel_size * font->emSize /12.0;
+#if dbgHbCrFt
     fprintf(stderr, "Attempt: set font size: %d, em: %f\n", desiredSize);
+#endif
     if (FT_Set_Pixel_Sizes(g_ft_face, 0, desiredSize)) {
         fprintf(stderr, "Error: Could not set pixel size on the font face to %d\n", l_pixel_size);
         exit(EXIT_FAILURE);
