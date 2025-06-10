@@ -58,7 +58,7 @@ int cairo_MeasureString(
 {
     /* 1. Initialize text shaping and set the Cairo font face. */
     init_text_shaping();
-    float desiredSize=0.0;
+    float desiredSizeF=0.0; int desiredSize = 0;
     const char *font_path = gdiplus_get_font_path();
     const char *env_font_size = getenv("GDIPLUS_FONT_SIZE");
 FT_Face      l_ft_face = NULL;
@@ -78,7 +78,8 @@ hb_font_t   *l_hb_font = NULL;
             l_pixel_size = 12;
     }
     float sizeInPoints = gdip_unit_conversion (font->unit, UnitPoint, gdip_get_display_dpi(), gtMemoryBitmap, font->emSize);
-    desiredSize = l_pixel_size * sizeInPoints * (18.666/14) /12.0;
+    desiredSizeF = l_pixel_size * sizeInPoints * (18.666/14) /12.0;
+    desiredSize = (uint)desiredSizeF;
 #if dbgHbCrFt
     fprintf(stderr, "Attempt: set font size: %d, em: %f\n", desiredSize);
 #endif
@@ -140,7 +141,7 @@ hb_font_t   *l_hb_font = NULL;
     double finalWidth = 0.0;
     for (unsigned int i = 0; i < glyph_count; i++)
     {
-        finalWidth += glyph_pos[i].x_advance / 64.0;
+        finalWidth += glyph_pos[i].x_advance / (64.0 * (4/3) * (sizeInPoints/12));
     }
 
     /* 5. Obtain Cairo font extents for height information. */
@@ -193,7 +194,8 @@ static inline int cairo_MeasureString(
     int                   *linesFilled)
 {
     init_text_shaping();
-    float desiredSize=0.0;
+    float desiredSizeF=0.0;
+    int desiredSize;
     const char *font_path = gdiplus_get_font_path();
     const char *env_font_size = getenv("GDIPLUS_FONT_SIZE");
 FT_Face      l_ft_face = NULL;
@@ -213,7 +215,8 @@ hb_font_t   *l_hb_font = NULL;
             l_pixel_size = 12;
     }
     float sizeInPoints = gdip_unit_conversion (font->unit, UnitPoint, gdip_get_display_dpi(), gtMemoryBitmap, font->emSize);
-    desiredSize = l_pixel_size * sizeInPoints * (18.666 / 14) /12.0;
+    desiredSizeF = l_pixel_size * sizeInPoints * (18.666 / 14) /12.0;
+    desiredSize =  (int)desiredSizeF;
     //desiredSize = l_pixel_size * font->emSize /12.0;
 #if dbgHbCrFt
     fprintf(stderr, "Attempt: set font size: %d, em: %f\n", desiredSize);
@@ -273,7 +276,7 @@ hb_font_t   *l_hb_font = NULL;
     double finalWidth = 0.0;
     for (unsigned int i = 0; i < glyph_count; i++)
     {
-        finalWidth += glyph_pos[i].x_advance / 64.0;
+        finalWidth += glyph_pos[i].x_advance / (64.0 * (4/3.0) * (sizeInPoints/12.0));
     }
 
     cairo_font_extents_t fe;

@@ -265,7 +265,8 @@ hb_font_t   *l_hb_font = NULL;
         if (l_pixel_size <= 0)
             l_pixel_size = 12;
     }
-    float desiredSize = l_pixel_size * FontSize/12.0;
+    float desiredSizeF = l_pixel_size * FontSize/12.0;
+    int desiredSize = (int)desiredSizeF;
 #if dbgHbCrFt
         fprintf(stderr, "TextRenderer: attempt to set to %f\n", desiredSize);
 #endif
