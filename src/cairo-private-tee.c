@@ -1,6 +1,28 @@
 #include "cairo-private-tee.h"
-#include <stdlib.h>
 #include "cairo-tee.h"
+#include <stdlib.h>
+
+#include <cairo.h>
+#include <stdbool.h>
+#include <cairo.h>
+#include <stdio.h>
+
+// Global variables that track whether the full-window surface is created
+// and store its reference.
+static bool g_window_surface_created = false;
+static cairo_surface_t *g_window_surface = NULL;
+static cairo_status_t patched_svg_write_callback(void *closure,
+                                                 const unsigned char *data,
+                                                 unsigned int length)
+{
+    /* Log the flushed SVG chunk to stderr.
+       Depending on your patch, 'closure' can be used if you need extra context;
+       otherwise, it can be ignored (or set to NULL). */
+    if (fwrite(data, 1, length, stderr) != length)
+        return CAIRO_STATUS_WRITE_ERROR;
+    fflush(stderr);
+    return CAIRO_STATUS_SUCCESS;
+}
 
 /*
  * Implements a drop-in replacement for the cairo tee surface functions.
@@ -23,48 +45,78 @@ cairo_surface_t *tee_surface_create(Display *display, Drawable drawable,
     fprintf(stderr, "Tee surface: begin checks.\n");
     cairo_surface_t *primary =
         cairo_xlib_surface_create(display, drawable, visual, width, height);
-    fprintf(stderr, "Cairo: Xlib: %s\n", cairo_status_to_string(cairo_surface_status(primary)));
+    fprintf(stderr, "Cairo: Xlib: %s\n",
+            cairo_status_to_string(cairo_surface_status(primary)));
     const char *tee_filename = getenv("GDIPLUS_TEE_SVG_FILE");
     if (!tee_filename || tee_filename[0] == '\0') {
         return primary;
     }
 
 #if defined(CAIRO_HAS_TEE_SURFACE)
-    cairo_surface_t *tee = cairo_tee_surface_create(primary);
-    fprintf(stderr, "Tee surface: attempted to create tee, (%d).\n", &tee);
-    if (cairo_surface_get_type(tee) == CAIRO_SURFACE_TYPE_TEE)
-    fprintf(stderr, "Tee surface: attempted to create tee, it is TYPE_TEE now.\n");
-    cairo_surface_t *svg =
-        cairo_svg_surface_create(tee_filename, width, height);
-    cairo_tee_surface_add(tee, svg);
-    fprintf(stderr, "SVG ADDED?.\n");
-    if (!tee || cairo_surface_status(tee) != CAIRO_STATUS_SUCCESS) {
-    fprintf(stderr, "Tee surface: attempted to create tee FAILED.\n");
-        fprintf(stderr,
+    // Only record the global surface if it's not already set.
+    if (!g_window_surface_created) {
+        if (cairo_xlib_surface_get_width(primary) < 800 ||
+            cairo_xlib_surface_get_height(primary) < 600 ) {
+            fprintf(stderr,
+                    "[DEBUG] tee global: %p | status: %d | type: %d | content: "
+                    "%d | dims: %dx%d\n",
+                    (void *)primary, cairo_surface_status(primary),
+                    (int)cairo_surface_get_type(primary),
+                    (int)cairo_surface_get_content(primary),
+                    cairo_xlib_surface_get_width(primary),
+                    cairo_xlib_surface_get_height(primary));
+            fprintf(stderr, "Surface too small, not cloning\n");
+            return primary;
+        }
+        cairo_surface_t *tee = cairo_tee_surface_create(primary);
+        fprintf(stderr, "Tee surface: attempted to create tee, (%d) (%d)x(%d).\n", &tee, width, height);
+        if (cairo_surface_get_type(tee) == CAIRO_SURFACE_TYPE_TEE)
+            fprintf(
+                stderr,
+                "Tee surface: attempted to create tee, it is TYPE_TEE now.\n");
+        cairo_surface_t *svg =
+            cairo_svg_surface_create(tee_filename, width, height);
+        cairo_surface_t *svg_log =
+            cairo_svg_surface_create_for_stream(patched_svg_write_callback, NULL, width, height);
+        cairo_tee_surface_add(tee, svg_log);
+
+        fprintf(stderr, "SVG ADDED?.\n");
+        if (!tee || cairo_surface_status(tee) != CAIRO_STATUS_SUCCESS) {
+            fprintf(stderr, "Tee surface: attempted to create tee FAILED.\n");
+            fprintf(
+                stderr,
                 "Warning: Tee surface creation failed (%s). Falling back to "
                 "primary surface.\n",
                 cairo_status_to_string(cairo_surface_status(tee)));
+            return primary;
+        }
+        fprintf(stderr, "Tee surface created successfully.\n");
+        if (cairo_surface_get_type(tee) != CAIRO_SURFACE_TYPE_TEE ||
+            cairo_surface_status(tee) != CAIRO_STATUS_SUCCESS) {
+            fprintf(stderr, "Tee surface creation failed; falling back to "
+                            "primary surface.\n");
+            return primary;
+        }
+        g_window_surface_created = true;
+        g_window_surface = svg;
+        fprintf(stderr,
+                "[DEBUG] tee global: %p | status: %d | type: %d | content: %d "
+                "| dims: %dx%d\n",
+                (void *)tee, cairo_surface_status(tee),
+                (int)cairo_surface_get_type(tee),
+                (int)cairo_surface_get_content(tee),
+                cairo_xlib_surface_get_width(primary),
+                cairo_xlib_surface_get_height(primary));
+        fprintf(stderr, "[DEBUG] Full-window surface created: %p\n",
+                (void *)g_window_surface);
+        return tee;
+    } else {
+        fprintf(stderr,
+                "[DEBUG] create_window_surface called but global surface "
+                "already set: %p\n",
+                (void *)g_window_surface);
         return primary;
     }
-    fprintf(stderr, "Tee surface created successfully.\n");
-    if (cairo_surface_get_type(tee) != CAIRO_SURFACE_TYPE_TEE ||
-        cairo_surface_status(tee) != CAIRO_STATUS_SUCCESS) {
-        fprintf(
-            stderr,
-            "Tee surface creation failed; falling back to primary surface.\n");
-        return primary;
-    }
-    /*cairo_surface_t *svg2 =
-        cairo_svg_surface_create(tee_filename, width, height);
-    if (cairo_surface_status(svg2) != CAIRO_STATUS_SUCCESS) {
-        fprintf(
-            stderr,
-            "SVG surface creation failed; falling back to primary surface.\n");
-        return primary;
-    }*/
-    //cairo_tee_surface_add(tee, svg2);
-
-    return tee;
 #else
     fprintf(stderr, "Tee surface not enabled :(.\n");
     /* Tee support not available: fall back to the primary surface */
