@@ -36,12 +36,57 @@
 #include "matrix-private.h"
 #include "bitmap-private.h"
 #include "metafile-private.h"
+#include <cairo/cairo-tee.h>
+#include "cairo-private-tee.c"
 
 #include <cairo/cairo-features.h>
 
 #define	NO_CAIRO_AA
 
 #define MAX_GRAPHICS_STATE_STACK 512
+
+// A helper function to map cairo_surface_type_t to a string
+const char* cairo_surface_type_to_string(cairo_surface_t *surface) {
+    cairo_surface_type_t type = cairo_surface_get_type(surface);
+    switch (type) {
+        case CAIRO_SURFACE_TYPE_IMAGE:
+            return "Image";
+        case CAIRO_SURFACE_TYPE_PDF:
+            return "PDF";
+        case CAIRO_SURFACE_TYPE_PS:
+            return "PS";
+        case CAIRO_SURFACE_TYPE_XML:
+            return "XML";
+        case CAIRO_SURFACE_TYPE_SCRIPT:
+            return "Script";
+        case CAIRO_SURFACE_TYPE_XLIB:
+            return "Xlib";
+        case CAIRO_SURFACE_TYPE_XCB:
+            return "XCB";
+        case CAIRO_SURFACE_TYPE_GLITZ:
+            return "Glitz";
+        case CAIRO_SURFACE_TYPE_QUARTZ:
+            return "Quartz";
+        case CAIRO_SURFACE_TYPE_WIN32:
+            return "Win32";
+        case CAIRO_SURFACE_TYPE_BEOS:
+            return "BeOS";
+        case CAIRO_SURFACE_TYPE_DIRECTFB:
+            return "DirectFB";
+        case CAIRO_SURFACE_TYPE_SVG:
+            return "SVG";
+        case CAIRO_SURFACE_TYPE_OS2:
+            return "OS2";
+        case CAIRO_SURFACE_TYPE_WIN32_PRINTING:
+            return "Win32 Printing";
+        case CAIRO_SURFACE_TYPE_QUARTZ_IMAGE:
+            return "Quartz Image";
+        case CAIRO_SURFACE_TYPE_RECORDING:
+            return "Recording";
+        default:
+            return "Unknown";
+    }
+}
 
 float
 gdip_unit_conversion (Unit from, Unit to, float dpi, GraphicsType type, float nSrc)
@@ -259,7 +304,7 @@ GdipCreateFromHDC (HDC hdc, GpGraphics **graphics)
 	XGetGeometry (clone->display, clone->drawable, &root,
 		      &x, &y, &w, &h, &border_w, &depth);
 	
-	surface = cairo_xlib_surface_create(clone->display, clone->drawable,
+	surface = tee_surface_create(clone->display, clone->drawable,
 	    DefaultVisual(clone->display, DefaultScreen(clone->display)),
 	    w, h);
 			
@@ -369,7 +414,7 @@ GdipCreateFromXDrawable_linux(Drawable d, Display *dpy, GpGraphics **graphics)
 		(unsigned int *)&bounds.Width, (unsigned int *)&bounds.Height, 
 		(unsigned int *)&bwidth_ignore, (unsigned int *)&depth_ignore);
 	
-	surface = cairo_xlib_surface_create(dpy, d,
+	surface = tee_surface_create(dpy, d,
 		    DefaultVisual(dpy, DefaultScreen(dpy)),
 		    bounds.Width, bounds.Height);
 	
@@ -1988,6 +2033,7 @@ GdipFlush (GpGraphics *graphics, GpFlushIntention intention)
 		return ObjectBusy;
 
 	surface = cairo_get_target (graphics->ct);
+	fprintf(stderr, "calling flush on %s", cairo_surface_type_to_string(surface));
 	cairo_surface_flush (surface);
 
 #ifdef CAIRO_HAS_QUARTZ_SURFACE

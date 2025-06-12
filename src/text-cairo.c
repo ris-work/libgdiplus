@@ -38,7 +38,7 @@
 #include "graphics-cairo-private.h"
 #include "graphics-private.h"
 #include "harfbuzz-private-2.h"
-#include "harfbuzz-private.h"
+//#include "harfbuzz-private.h"
 #include "text-cairo-private.h"
 
 #include <harfbuzz/hb-ft.h>

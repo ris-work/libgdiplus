@@ -18,6 +18,7 @@ extern "C" {
 #include <harfbuzz/hb-ft.h>
 #include <harfbuzz/hb-icu.h>
 #include <harfbuzz/hb.h>
+#include "harfbuzz-private.h"
 
 /* Internal libgdiplus headers */
 #include "graphics-private.h" /* Provides GpGraphics, RectF, etc. */
