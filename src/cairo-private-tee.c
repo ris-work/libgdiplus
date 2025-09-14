@@ -7,10 +7,15 @@
 #include <cairo.h>
 #include <stdio.h>
 
+#include <cairo/cairo-xlib.h>
+#include <X11/Xlib.h>
+#include <stdio.h>
 // Global variables that track whether the full-window surface is created
 // and store its reference.
 static bool g_window_surface_created = false;
 static cairo_surface_t *g_window_surface = NULL;
+static cairo_surface_t *g_window_surface_tee = NULL;
+static cairo_surface_t *g_window_surface_svg = NULL;
 static cairo_status_t patched_svg_write_callback(void *closure,
                                                  const unsigned char *data,
                                                  unsigned int length)
@@ -18,11 +23,84 @@ static cairo_status_t patched_svg_write_callback(void *closure,
     /* Log the flushed SVG chunk to stderr.
        Depending on your patch, 'closure' can be used if you need extra context;
        otherwise, it can be ignored (or set to NULL). */
+	fprintf(stderr, "SVG write callback called");
     if (fwrite(data, 1, length, stderr) != length)
         return CAIRO_STATUS_WRITE_ERROR;
     fflush(stderr);
     return CAIRO_STATUS_SUCCESS;
 }
+
+
+/*
+ * Heuristic function to check if a Cairo Xlib surface is associated with a
+ * top-level window. The function prints debugging information at each step.
+ *
+ * Parameters:
+ *   surface - a pointer to the Cairo surface to examine.
+ *   dpy     - the X Display pointer.
+ *
+ * Returns:
+ *   1 (true) if the surface appears to be the main/top-level window surface,
+ *   0 (false) otherwise.
+ */
+int is_main_window_surface(cairo_surface_t *surface, Display *dpy) {
+    fprintf(stderr, "[DEBUG] Checking surface %p\n", (void *)surface);
+
+    cairo_surface_type_t type = cairo_surface_get_type(surface);
+    fprintf(stderr, "[DEBUG] Surface type: %d\n", (int)type);
+
+    if (type != CAIRO_SURFACE_TYPE_XLIB) {
+        fprintf(stderr, "[DEBUG] Not an Xlib surface. Returning 0.\n");
+        return 0;
+    }
+
+    // Retrieve the underlying X drawable.
+    Drawable drawable = cairo_xlib_surface_get_drawable(surface);
+    fprintf(stderr, "[DEBUG] X Drawable: %lu\n", (unsigned long)drawable);
+
+    // Query the window tree.
+    Window root, parent;
+    Window *children = NULL;
+    unsigned int nchildren = 0;
+    if (!XQueryTree(dpy, drawable, &root, &parent, &children, &nchildren)) {
+        fprintf(stderr, "[DEBUG] XQueryTree failed for drawable %lu. Returning 0.\n", (unsigned long)drawable);
+        return 0;
+    }
+    fprintf(stderr, "[DEBUG] XQueryTree: root = %lu, parent = %lu, nchildren = %u\n",
+            (unsigned long)root, (unsigned long)parent, nchildren);
+    if (children) {
+        fprintf(stderr, "[DEBUG] Listing children: ");
+        for (unsigned int i = 0; i < nchildren; i++) {
+            fprintf(stderr, "%lu ", (unsigned long)children[i]);
+        }
+        fprintf(stderr, "\n");
+        XFree(children);
+    } else {
+        fprintf(stderr, "[DEBUG] No children returned\n");
+    }
+
+    // Heuristic: if the parent is the root window, then the surface is likely a top-level window.
+    if (parent == root) {
+        fprintf(stderr, "[DEBUG] Parent equals root; surface may be top-level.\n");
+        // Check dimensions.
+        int width = cairo_xlib_surface_get_width(surface);
+        int height = cairo_xlib_surface_get_height(surface);
+        fprintf(stderr, "[DEBUG] Surface dimensions: %dx%d\n", width, height);
+        // Adjust these thresholds as required by your application.
+        if (width >= 800 && height >= 600) {
+            fprintf(stderr, "[DEBUG] Dimensions meet threshold. Likely a main window surface. Returning 1.\n");
+            return 1;
+        } else {
+            fprintf(stderr, "[DEBUG] Dimensions below threshold. Likely not the main window. Returning 0.\n");
+            return 0;
+        }
+    } else {
+        fprintf(stderr, "[DEBUG] Parent (%lu) does not equal root (%lu). Surface is likely embedded. Returning 0.\n",
+                (unsigned long)parent, (unsigned long)root);
+        return 0;
+    }
+}
+
 
 /*
  * Implements a drop-in replacement for the cairo tee surface functions.
@@ -54,7 +132,7 @@ cairo_surface_t *tee_surface_create(Display *display, Drawable drawable,
 
 #if defined(CAIRO_HAS_TEE_SURFACE)
     // Only record the global surface if it's not already set.
-    if (!g_window_surface_created) {
+    if (true || !g_window_surface_created) {
         if (cairo_xlib_surface_get_width(primary) < 800 ||
             cairo_xlib_surface_get_height(primary) < 600 ) {
             fprintf(stderr,
@@ -98,7 +176,9 @@ cairo_surface_t *tee_surface_create(Display *display, Drawable drawable,
             return primary;
         }
         g_window_surface_created = true;
-        g_window_surface = svg;
+        g_window_surface = primary;
+        g_window_surface_tee = tee;
+        g_window_surface_svg = svg_log;
         fprintf(stderr,
                 "[DEBUG] tee global: %p | status: %d | type: %d | content: %d "
                 "| dims: %dx%d\n",

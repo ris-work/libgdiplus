@@ -501,18 +501,22 @@ GpStatus WINGDIPAPI GdipDeleteGraphics(GpGraphics *graphics) {
         /* if recording this is where we save the metafile (stream or file) */
         if (graphics->metafile->recording)
             gdip_metafile_stop_recording(graphics->metafile);
-        if (g_window_surface == graphics->metasurface) {
+        if (g_window_surface_tee == graphics->metasurface) {
             fprintf(stderr, "[DEBUG] Freeing global full-window surface: %p\n",
                     (void *)g_window_surface);
             g_window_surface = NULL;
             g_window_surface_created = false;
-	    cairo_surface_flush(graphics->metasurface);
+	    cairo_surface_flush(g_window_surface_tee);
+	    cairo_surface_flush(g_window_surface_svg);
+        cairo_surface_destroy(g_window_surface_tee);
+        cairo_surface_destroy(g_window_surface_svg);
         } else {
             fprintf(stderr,
                     "[DEBUG] free_window_surface called for non-global "
                     "surface: %p\n",
                     (void *)graphics->metasurface);
-	    cairo_surface_flush(graphics->metasurface);
+	    cairo_surface_flush(g_window_surface_tee);
+	    cairo_surface_flush(g_window_surface_svg);
         }
         cairo_surface_destroy(graphics->metasurface);
         graphics->metasurface = NULL;
